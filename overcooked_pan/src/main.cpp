@@ -22,8 +22,22 @@
 #define INVERT_X    false
 #define INVERT_Y    false
 
+// SSD1306 OLED (128x64, I2C 4-pin module): shows the gesture to do, the time
+// bar and BURNT! (see PatternOled.h). The ESP32's default I2C pins, free on
+// this station (RC522 is on 32/33/25/26/27, the LED strip on 13, the joystick
+// on 34/35), and the same pair the deep fryer's screen uses.
+//   OLED GND -> GND
+//   OLED VCC -> 3V3
+//   OLED SDA -> GPIO21
+//   OLED SCL -> GPIO22
+// Address 0x3C, or 0x3D on some clones; begin() probes both and says on serial
+// what it found.
+#define OLED_SDA_PIN 21
+#define OLED_SCL_PIN 22
+
 JoystickPatternTask joystickTask(JOY_X_PIN, JOY_Y_PIN, JOY_DEAD_ZONE, INVERT_X, INVERT_Y);
-station::StandardStation fryingPan(oc::StationKind::Pan, &joystickTask);
+pan::PatternOled oled(OLED_SDA_PIN, OLED_SCL_PIN);
+station::StandardStation fryingPan(oc::StationKind::Pan, &joystickTask, &oled);
 
 void setup() {
   Serial.begin(115200);

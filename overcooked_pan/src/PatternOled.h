@@ -24,17 +24,38 @@ class PatternOled : public station::DisplaySink {
   static constexpr uint8_t kWidth = 128;
   static constexpr uint8_t kHeight = 64;
   static constexpr uint8_t kAddress = 0x3C;
+  static constexpr uint8_t kAltAddress = 0x3D; // some clones ship as this
 
   PatternOled(uint8_t sdaPin, uint8_t sclPin, TwoWire &wire = Wire)
       : sdaPin_(sdaPin), sclPin_(sclPin), wire_(wire), display_(kWidth, kHeight, &wire_, -1) {}
 
   void begin() override {
     wire_.begin(sdaPin_, sclPin_);
-    ready_ = display_.begin(SSD1306_SWITCHCAPVCC, kAddress);
-    if (!ready_) {
-      Serial.println("Pan OLED not found (check SDA/SCL and the address)");
+    // Adafruit_SSD1306::begin() reports success even with nothing on the bus,
+    // so check for an ACK ourselves, on the usual address then the alternate.
+    uint8_t address = 0;
+    for (uint8_t candidate : {kAddress, kAltAddress}) {
+      if (answers(candidate)) {
+        address = candidate;
+        break;
+      }
+    }
+    if (!address) {
+      Serial.printf("Pan OLED: nothing answered at 0x%02X or 0x%02X on SDA=%u SCL=%u. Devices on the bus:",
+                    kAddress, kAltAddress, sdaPin_, sclPin_);
+      bool any = false;
+      for (uint8_t a = 1; a < 127; a++) {
+        if (answers(a)) {
+          Serial.printf(" 0x%02X", a);
+          any = true;
+        }
+      }
+      Serial.println(any ? "" : " none (check SDA/SCL/VCC/GND)");
       return;
     }
+    ready_ = display_.begin(SSD1306_SWITCHCAPVCC, address);
+    Serial.printf("Pan OLED at 0x%02X: %s\n", address, ready_ ? "ok" : "init failed");
+    if (!ready_) return;
     display_.clearDisplay();
     display_.display();
   }
@@ -84,6 +105,11 @@ class PatternOled : public station::DisplaySink {
   }
 
  private:
+  bool answers(uint8_t address) {
+    wire_.beginTransmission(address);
+    return wire_.endTransmission() == 0;
+  }
+
   static constexpr uint32_t kRenderIntervalMs = 40; // 25 Hz, plenty smooth for these animations
   static constexpr uint32_t kFlashMs = 700;
   static constexpr uint8_t kPatternCount = 4;
