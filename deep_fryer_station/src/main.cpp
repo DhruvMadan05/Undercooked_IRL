@@ -33,12 +33,14 @@
 #define MISO_PIN 26
 #define RST_PIN  27
 
-// WS2812B strip, used purely as the fry progress bar now that the OLED
-// carries the target-tracking readout.
+// WS2812B strip, 5 pixels (same as the other stations), used purely as the
+// fry progress bar now that the OLED carries the target-tracking readout.
+// Each pixel is one 2-second chunk of the 10-second success window: lights
+// solid blue as it's earned, then all flash green together on success.
 //   Strip DIN -> GPIO13   (via ~330 ohm series resistor)
 //   Strip 5V  -> 5V, Strip GND -> GND
 #define LED_PIN   13
-#define LED_COUNT 16
+#define LED_COUNT 5
 
 // 0.91" SSD1306 OLED (128x32), I2C, "Ver 1.6" 4-pin module. Shows the
 // target zone's position and which direction the hand needs to move to
@@ -106,9 +108,9 @@
 // to fully fried, 60 seconds of continuous miss to go from full to burnt.
 #define PROGRESS_FILL_PER_SEC  (1.0f / 10.0f)
 #define PROGRESS_DRAIN_PER_SEC (1.0f / 60.0f)
-#define FRY_START_PROGRESS 0.5f  // start in the middle, like the bar it's modeled on -- starting at
-                                  // 0.0 gives zero buffer, so any miss on the very first tick is an
-                                  // instant fail before the player's hand is even in position
+#define FRY_START_PROGRESS 0.05f // a small head start, not a visible one (rounds down to 0 lit LEDs) --
+                                  // starting at a literal 0.0 gives zero buffer, so any miss on the very
+                                  // first tick is an instant fail before the player's hand is even in position
 #define FRY_GRACE_MS 750         // scoring is suspended for this long after a scan, so the ultrasonic
                                   // gets a few pings to settle and the player has time to react
 
@@ -219,16 +221,15 @@ void updateTarget(float dt) {
   if (targetPos > 1.0f) { targetPos = 2.0f - targetPos; targetVel = -targetVel; }
 }
 
-// Fry progress bar, filled left-to-right. Ramps amber -> green so a glance
-// tells you roughly how close to done you are, not just the raw fraction.
+// Fry progress bar: one pixel lights up solid blue per 2 seconds of net
+// success (5 pixels * 2s = the 10-second fill time), filled left-to-right.
+// The green "done" flash is handled separately, in flashResult().
 void renderProgressBar() {
   strip.clear();
 
   int litPixels = (int)roundf(fryProgress * LED_COUNT);
   for (int i = 0; i < litPixels; i++) {
-    uint8_t g = (uint8_t)(80 + fryProgress * 175);  // 80 -> 255
-    uint8_t r = (uint8_t)(150 * (1.0f - fryProgress)); // 150 -> 0
-    strip.setPixelColor(i, strip.Color(r, g, 0));
+    strip.setPixelColor(i, strip.Color(0, 60, 255));
   }
 
   strip.show();
