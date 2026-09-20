@@ -5,7 +5,7 @@
 [level]
 duration_s = 180        # length of a round
 countdown_s = 3         # 3-2-1 before the round starts
-order_interval_s = 25   # a new order appears this often ...
+order_interval_s = 30   # a new order appears this often ...
 max_orders = 4          # ... as long as fewer than this many are open
 order_time_s = 90       # default time to deliver an order (a recipe can override it)
 expire_penalty = 10     # points lost when an order runs out
@@ -40,11 +40,11 @@ sink = 1
 # An ingredient with no processing (bun) goes straight onto a plate.
 [ingredient.tomato]
 count = 3
-cutting_board = { goal = 50 }
+cutting_board = { goal = 20 }
 
 [ingredient.lettuce]
 count = 3
-cutting_board = { goal = 120 }
+cutting_board = { goal = 20 }
 
 [ingredient.patty]
 count = 2
