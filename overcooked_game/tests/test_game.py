@@ -1,6 +1,6 @@
 import pytest
 
-from conftest import BUN, CUT, DEL, MASTER, PAN, PATTY, PLATE, PLT, POT, RICE, STRAY, TOMATO1, TOMATO2
+from conftest import BUN, CUT, DEL, FRY, MASTER, PAN, PATTY, PLATE, PLT, POT, POTATO, RICE, STRAY, TOMATO1, TOMATO2
 
 from overcooked import protocol as p
 from overcooked.model import ItemState, Phase
@@ -149,6 +149,35 @@ def test_pan_rejects_tomato(h):
     h.clear()
     h.place(PAN, TOMATO1)
     assert h.last(PAN, p.Reject) is not None
+
+
+# ---- deep fryer -----------------------------------------------------------------------------
+
+def test_deep_fryer_tracks_progress_then_cooks(h):
+    h.start_round()
+    h.place(FRY, POTATO)
+    accept = h.last(FRY, p.Accept)
+    assert (accept.task, accept.goal) == (p.TaskKind.FRY, 4)
+    h.progress(FRY, POTATO, 2)
+    assert h.item(POTATO).progress == 2 and h.item(POTATO).state == ItemState.RAW
+    h.done(FRY, POTATO)
+    assert h.item(POTATO).state == ItemState.COOKED
+
+
+def test_deep_fryer_resumes_after_pickup(h):
+    h.start_round()
+    h.place(FRY, POTATO)
+    h.progress(FRY, POTATO, 3)
+    h.remove(FRY, POTATO, progress=1)  # progress can drop back down, e.g. the target got away
+    h.place(FRY, POTATO)
+    assert h.last(FRY, p.Accept).progress == 1
+
+
+def test_deep_fryer_rejects_tomato(h):
+    h.start_round()
+    h.clear()
+    h.place(FRY, TOMATO1)
+    assert h.last(FRY, p.Reject) is not None
 
 
 # ---- pot ----------------------------------------------------------------------------------
