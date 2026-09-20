@@ -24,6 +24,7 @@ what they are told, the bridge is a dumb relay. Reset = one function call.
 | `shared/StationCore/` | `Display` (LEDs), `Session` (Hello/Welcome/heartbeat), `Station` (glue), `StationTask` interface, `StandardWiring.h` (pin map), `StandardStation.h` (one-object station) |
 | `overcooked_cutting_board/` | Station: `PressTask` counts limit-switch presses (GPIO14). Also has the `native` unit-test env |
 | `overcooked_pan/` | Station: `JoystickPatternTask` (analog X/Y GPIO34/35), pure `PatternTracker` (circle / zigzag), native tests |
+| `deep_fryer_station/` | Station: `FryTask` (HC-SR04 hand height GPIO4/35, SSD1306 OLED I2C GPIO21/22), pure `fryer::ProgressTracker`/`overlaps()` (target overlap + fill/drain scoring), native tests |
 | `overcooked_reader_station/` | Pot / plate / delivery: same firmware, env picks the `StationKind` (`-e pot|plate|delivery`, one at a time) |
 | `overcooked_server/` | **The bridge** (name is historical): ESP-NOW <-> USB serial + its own RC522 for calibration |
 | `overcooked_game/` | Python game server (`overcooked/` package), `level.toml`, browser UI in `overcooked/static/`, pytest suite |
@@ -61,6 +62,10 @@ what they are told, the bridge is a dumb relay. Reset = one function call.
   Saved to `overcooked_game/calibration.json` (git-ignored), "Load last calibration" in the UI.
 - **Progress is server-side**: `Accept` carries saved progress, `TagRemoved` reports where the station stopped, so
   food can be picked up and put back, even on another station of the same kind.
+- **Deep fryer**: like the pan, a `TaskStation` (`kind="deep_fryer"`, `TaskKind.FRY`) - the firmware runs its own
+  minigame (align hand height with a roaming target) and reports progress 0..goal same as presses/pattern
+  steps, except progress can fall back down (a miss drains it) as well as rise, which `TaskProgress`/resume
+  already supported without changes. No new protocol message was needed.
 - **Plates (latest change)**: a plate reader *is* a plate. Any food put on it is added to that plate immediately
   (`game.plate_for(station)` finds the plate whose `home_mac` is that reader); plate tags are rejected there.
   Touching a plate's tag at the delivery station serves what is on its reader. No `[plates]` in `level.toml`
@@ -95,6 +100,7 @@ cd overcooked_game && .venv/bin/python -m pytest -q          # 102 tests, ~0.5 s
 PIO=~/.platformio/penv/bin/pio
 cd overcooked_cutting_board && $PIO run && $PIO test -e native   # 6 tests
 cd overcooked_pan           && $PIO run && $PIO test -e native   # 8 tests
+cd deep_fryer_station       && $PIO run && $PIO test -e native   # 8 tests
 cd overcooked_server        && $PIO run
 cd overcooked_reader_station && $PIO run -e pot                  # one env at a time; -t upload to flash
 ```
@@ -114,20 +120,31 @@ Every firmware project sets `default_envs` so a bare `pio run` works; in `overco
 - Joystick modules must be powered from 3V3, not 5V (ESP32 ADC pins). Use ADC1 pins only (ADC2 dies when WiFi is on).
 - Something typed stray text into `overcooked_server/platformio.ini` once (broke the build). If a `pio` config error
   looks like prose, check the first line.
+- On this machine (Apple clang, `platformio/native` 1.2.1) `pio test -e native` defaults to a pre-C++11 standard,
+  which fails on `constexpr`/`enum class` in any pure-logic header (`PatternTracker.h`, `FryTracker.h`, ...).
+  `deep_fryer_station/platformio.ini` works around it with `-std=gnu++17` in the native env's `build_flags`;
+  `overcooked_cutting_board` and `overcooked_pan` do not have that flag yet and will hit the same failure until
+  it is added there too.
 - `overcooked_game/calibration.json` currently holds a **real-hardware calibration made before plate pairing existed**
   (its plate has no `station` key). Loading it leaves the plate unpaired, so the plate reader rejects food with
   "no plate tag is paired with this reader". Recalibrate. Do not delete the file without asking; it is the user's.
 
 ## Verified vs not verified
-- Verified in this environment: everything compiles for all firmware targets; pytest, and both native test suites pass;
-  a full simulated round (calibrate, cut with resume across boards, pan, pot cook/burn, plate, delivery) runs through
-  the real line protocol and browser UI (screenshotted in headless Chrome); the serial transport works over a pty.
+- Verified in this environment: everything compiles for all firmware targets (including the new
+  `deep_fryer_station`); pytest (105 tests) and the cutting board / pan / deep fryer native test suites pass
+  (native needs `-std=gnu++17`, see Gotchas); a full simulated round (calibrate, cut with resume across boards,
+  pan, pot cook/burn, plate, delivery) runs through the real line protocol and browser UI (screenshotted in
+  headless Chrome); the serial transport works over a pty. The deep fryer's server-side behaviour (accept,
+  progress resume on pickup, reject wrong food, `on_done` -> cooked) is unit tested the same way as the pan.
 - Not verified by the author of this file: anything on real hardware. The user has since run real boards (the saved
   `calibration.json` has real MACs), but no results were reported back. Specifically untested: RC522 removal detection
   tuning, ESP-NOW range with several stations, LED behaviour, joystick feel (`JOY_DEAD_ZONE`, `INVERT_X/Y`),
-  the bridge over a real USB port, pan/pot/plate/delivery firmware end to end.
-- The joystick pins (GPIO34/35) and the menu in `level.toml` (tomato, patty, rice, ... recipes, points) are
-  placeholders/guesses, easy to change.
+  the bridge over a real USB port, pan/pot/plate/delivery firmware end to end, and the entire deep fryer minigame
+  (HC-SR04 reading, target motion feel, OLED wiring/address) - it only ran as a hand-tested standalone sketch
+  before being integrated into StationCore here.
+- The joystick pins (GPIO34/35), the deep fryer's HC-SR04/OLED pins (GPIO4/35/21/22) and hand-height range
+  (`NEAR_CM`/`FAR_CM`/`CATCH_ZONE_FRAC`), and the menu in `level.toml` (tomato, patty, rice, potato, ...
+  recipes, points) are placeholders/guesses, easy to change.
 
 ## Sensible next steps
 1. Get hardware feedback and tune: removal miss count in `PresenceReader` (defaults 100 ms x 3), joystick dead zone,
@@ -136,6 +153,10 @@ Every firmware project sets `default_envs` so a bare `pio run` works; in `overco
 3. More than one tag on a reader (e.g. several foods on a plate at once) needs multi-tag reading in `PresenceReader`
    (RC522 anticollision) and a set-based `TagPlaced`/`TagRemoved`; deliberately not done.
 4. Real-time bridge health: only a hung-but-connected bridge is undetected today (no periodic ping).
+5. Add `-std=gnu++17` to `overcooked_cutting_board` and `overcooked_pan`'s native envs (see Gotchas) so
+   `pio test -e native` works there again on this toolchain, matching `deep_fryer_station/platformio.ini`.
+6. The deep fryer's `pulseIn()` HC-SR04 read blocks `update()` for up to ~6ms per ping (see README "Known
+   limits"); switch to an interrupt/timer-driven echo read if that is ever measured to cause missed heartbeats.
 
 ## Working with this user
 - They want a plan before big changes (they asked for one and approved it). Ask only when a decision is truly theirs;

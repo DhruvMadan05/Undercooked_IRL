@@ -255,4 +255,5 @@ BEHAVIORS: dict[StationKind, Behavior] = {
     StationKind.POT: Pot(),
     StationKind.PLATE: PlateStation(),
     StationKind.DELIVERY: Delivery(),
+    StationKind.FRYER: TaskStation(StationKind.FRYER, "deep_fryer", TaskKind.FRY),
 }

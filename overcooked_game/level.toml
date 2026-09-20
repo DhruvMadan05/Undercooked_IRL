@@ -23,6 +23,7 @@ plate_capacity = 4      # ingredients that fit on one plate
 cutting_board = 1
 pan = 1
 pot = 1
+deep_fryer = 1
 plate = 2
 delivery = 1
 
@@ -30,6 +31,7 @@ delivery = 1
 #   cutting_board = { goal = presses }               raw -> chopped
 #   pan           = { goal = steps, pattern = ".." } raw -> cooked (joystick pattern)
 #   pot           = { seconds = t, burn_after = t }  raw -> cooked, then burnt if left in
+#   deep_fryer    = { goal = N }                     raw -> cooked (hand-height tracking minigame)
 # Optional in any of them: from = "raw", to = "cooked" (states: raw, chopped, cooked).
 # An ingredient with no processing (bun) goes straight onto a plate.
 [ingredient.tomato]
@@ -48,6 +50,10 @@ pan = { goal = 12, pattern = "circle" }
 count = 2
 pot = { seconds = 10, burn_after = 8 }
 
+[ingredient.potato]
+count = 2
+deep_fryer = { goal = 100 }
+
 [ingredient.bun]
 count = 2
 
@@ -63,3 +69,7 @@ points = 150
 [recipe.rice_bowl]
 needs = ["rice:cooked", "tomato:chopped"]
 points = 120
+
+[recipe.fries]
+needs = ["potato:cooked"]
+points = 90

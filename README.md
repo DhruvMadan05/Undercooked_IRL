@@ -12,6 +12,7 @@ laptop runs the game and shows the scoreboard.
 |---|---|
 | `overcooked_cutting_board/` | Cutting board station firmware (counts limit-switch presses) |
 | `overcooked_pan/` | Frying pan station firmware (joystick moved in a circle / zigzag pattern) |
+| `deep_fryer_station/` | Deep fryer station firmware (keep a hand's height, read by an HC-SR04, aligned with a roaming target shown on an OLED) |
 | `overcooked_reader_station/` | Pot, plate and delivery stations: reader + LEDs only, one project with an environment per kind. A plate station is the plate itself (food goes on it); each plate also has a tag, touched to the delivery station to serve |
 | `overcooked_server/` | Bridge firmware: ESP-NOW <-> USB serial, plus its own RC522 for calibration |
 | `shared/OvercookedComm/` | ESP-NOW protocol (typed messages, acks, retries) |
@@ -46,8 +47,9 @@ Every station and the bridge use the same RC522 and LED strip wiring, documented
 `shared/StationCore/src/StandardWiring.h`
 (RC522: SDA→GPIO32, SCK→GPIO33, MOSI→GPIO25, MISO→GPIO26, RST→GPIO27, GND→GND, 3.3V→3V3; LEDs: DIN→GPIO13).
 Extra inputs: cutting board limit switch on GPIO14 (`overcooked_cutting_board/src/main.cpp`), pan joystick
-X→GPIO34, Y→GPIO35, powered from 3V3 (`overcooked_pan/src/main.cpp`; these pins are my first guess, change
-them to match your build).
+X→GPIO34, Y→GPIO35, powered from 3V3 (`overcooked_pan/src/main.cpp`), deep fryer HC-SR04 (TRIG→GPIO4,
+ECHO→GPIO35 through a 5V→3.3V divider) and SSD1306 OLED (SDA→GPIO21, SCL→GPIO22)
+(`deep_fryer_station/src/main.cpp`; these pins are my first guess, change them to match your build).
 
 ## Calibration (start of every game, or "Load last calibration")
 
@@ -111,6 +113,7 @@ Server (`overcooked_game/overcooked/`):
 cd overcooked_game && .venv/bin/pytest                  # protocol, calibration, gameplay, simulator, web
 cd overcooked_cutting_board && pio test -e native       # tag presence logic
 cd overcooked_pan && pio test -e native                 # joystick pattern logic
+cd deep_fryer_station && pio test -e native              # hand/target overlap + progress scoring
 pio run                                                 # in each firmware folder
 ```
 
@@ -123,3 +126,8 @@ pio run                                                 # in each firmware folde
   feel of it is not: expect to tune `JOY_DEAD_ZONE` / `INVERT_X` / `INVERT_Y` and the goal in `level.toml`.
 - Stations must be within ESP-NOW range of the bridge; a station that loses the bridge shows a slowly
   blinking red pixel and reconnects by itself.
+- The deep fryer's `pulseIn()` HC-SR04 read briefly blocks `StationTask::update()` (up to ~6ms, capped to the
+  station's NEAR_CM/FAR_CM range rather than the sensor's full ~5m timeout) each ping, which is a soft
+  violation of "never block" in `StationTask.h`; fine at the current ping rate, worth an interrupt-driven
+  echo read if it ever causes missed heartbeats. The target motion (drift/dart), the OLED tracker rendering
+  and the physical hand-height feel are all untested, same as the pan's joystick feel.

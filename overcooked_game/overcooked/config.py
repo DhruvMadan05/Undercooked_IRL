@@ -17,6 +17,7 @@ DEFAULT_STATES = {
     "cutting_board": (ItemState.RAW, ItemState.CHOPPED),
     "pan": (ItemState.RAW, ItemState.COOKED),
     "pot": (ItemState.RAW, ItemState.COOKED),
+    "deep_fryer": (ItemState.RAW, ItemState.COOKED),
 }
 
 
@@ -88,7 +89,7 @@ def _process(ingredient: str, station: str, raw: dict) -> Process:
         seconds=float(raw.get("seconds", 0)),
         burn_after=float(raw.get("burn_after", 0)),
     )
-    if station in ("cutting_board", "pan") and proc.goal <= 0:
+    if station in ("cutting_board", "pan", "deep_fryer") and proc.goal <= 0:
         raise ConfigError(f"{where}: goal must be > 0")
     if station == "pan" and proc.pattern not in PATTERN_IDS:
         raise ConfigError(f"{where}: unknown pattern {proc.pattern!r} (known: {', '.join(PATTERN_IDS)})")

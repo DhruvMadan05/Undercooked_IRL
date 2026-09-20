@@ -30,6 +30,7 @@ plate_capacity = 3
 cutting_board = 1
 pan = 1
 pot = 1
+deep_fryer = 1
 plate = 1
 delivery = 1
 
@@ -48,6 +49,10 @@ pot = { seconds = 10, burn_after = 10 }
 [ingredient.bun]
 count = 1
 
+[ingredient.potato]
+count = 1
+deep_fryer = { goal = 4 }
+
 [recipe.sandwich]
 needs = ["tomato:chopped", "bun:raw"]
 points = 100
@@ -63,6 +68,7 @@ TOMATO2 = bytes([0x10, 0x00, 0x00, 0x02])
 PATTY = bytes([0x20, 0x00, 0x00, 0x01])
 RICE = bytes([0x30, 0x00, 0x00, 0x01])
 BUN = bytes([0x40, 0x00, 0x00, 0x01])
+POTATO = bytes([0x60, 0x00, 0x00, 0x01])
 PLATE = bytes([0x50, 0x00, 0x00, 0x01])
 STRAY = bytes([0xEE, 0xEE, 0xEE, 0xEE])
 
@@ -72,8 +78,9 @@ MACS = {
     p.StationKind.POT: "020000000201",
     p.StationKind.PLATE: "020000000301",
     p.StationKind.DELIVERY: "020000000401",
+    p.StationKind.FRYER: "020000000501",
 }
-CUT, PAN, POT, PLT, DEL = (MACS[k] for k in p.StationKind)
+CUT, PAN, POT, PLT, DEL, FRY = (MACS[k] for k in p.StationKind)
 
 
 @pytest.fixture
@@ -142,7 +149,7 @@ class Harness:
         for mac in MACS.values():
             self.place(mac, MASTER)
             self.remove(mac, MASTER)
-        for uid in (TOMATO1, TOMATO2, PATTY, RICE, BUN, PLATE):
+        for uid in (TOMATO1, TOMATO2, PATTY, RICE, BUN, POTATO, PLATE):
             self.bridge_tag(uid)
         assert self.game.phase == Phase.READY, self.game.phase
 
