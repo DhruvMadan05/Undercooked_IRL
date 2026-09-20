@@ -5,7 +5,7 @@ import asyncio
 
 import pytest
 
-from conftest import CUT
+from conftest import CUT, PAN
 
 from overcooked import protocol as p
 from overcooked.engine import Game
@@ -94,6 +94,33 @@ async def test_calibrate_and_play_a_round(rig):
     board.place(rig.sim.tag("stray").uid)
     await rig.settle()
     assert board.state == "rejected"
+
+
+async def test_pan_simon_says_round(rig):
+    await rig.run(2)
+    await rig.sim.auto_calibrate(pause=0)
+    await rig.settle()
+    assert rig.game.action("start_game") is None
+    await rig.run(3.5)
+
+    patty = rig.sim.tag("patty 1")
+    pan = rig.station(PAN)
+    pan.place(patty.uid)
+    await rig.settle()
+    assert (pan.state, pan.goal, pan.progress) == ("active", 3, 0)
+    cues = [rig.game.stations[PAN].data["pan_pattern"]]
+
+    for step in (1, 2):
+        pan.work()  # one correct gesture: the server re-targets the running task
+        await rig.settle()
+        assert (pan.state, pan.progress) == ("active", step)
+        cues.append(rig.game.stations[PAN].data["pan_pattern"])
+    assert all(a != b for a, b in zip(cues, cues[1:]))
+
+    pan.work()
+    await rig.settle()
+    assert pan.state == "finished"
+    assert rig.game.items[patty.uid].state == ItemState.COOKED
 
 
 async def test_station_that_loses_the_server_reconnects(rig):

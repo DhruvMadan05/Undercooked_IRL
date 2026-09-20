@@ -6,21 +6,42 @@ void Station::begin() {
   if (task_) task_->begin();
   display_.begin();
   display_.setOffline(true);
+  if (extraDisplay_) {
+    extraDisplay_->begin();
+    extraDisplay_->setOffline(true);
+  }
   session_.begin();
 
-  session_.onChange([this](bool connected) { display_.setOffline(!connected); });
+  session_.onChange([this](bool connected) {
+    display_.setOffline(!connected);
+    if (extraDisplay_) extraDisplay_->setOffline(!connected);
+  });
 
   // A server that just (re)started knows nothing about the tag on us.
   session_.onWelcome([this]() {
     if (!reader_.present()) return;
     if (task_) task_->stop();
-    display_.clearProgress();
+    clearDisplayProgress();
     announceTag();
   });
 
   oc::on<oc::MsgType::Accept>([this](const uint8_t *mac, const oc::AcceptMsg &msg) {
     session_.heardServer(mac);
-    if (state_ != State::Awaiting || !oc::sameTag(msg.tag, tag_)) return;
+    if (!oc::sameTag(msg.tag, tag_)) return;
+
+    if (state_ == State::Active) {
+      // Re-target a running task: the server changed what to do next (the pan's
+      // Simon Says picks a new pattern after every step). The player may have
+      // landed another step since we last reported, so never move the count back.
+      if (!task_ || msg.task != task_->kind()) return;
+      uint16_t progress = task_->progress() > msg.progress ? task_->progress() : msg.progress;
+      goal_ = msg.goal ? msg.goal : 1;
+      lastReported_ = msg.progress;
+      task_->start(msg.goal, progress, msg.param);
+      setDisplayProgress(progress, goal_);
+      return;
+    }
+    if (state_ != State::Awaiting) return;
 
     bool runnable = task_ && msg.task != oc::TaskKind::None && task_->kind() == msg.task;
     if (msg.task != oc::TaskKind::None && !runnable) {
@@ -34,7 +55,7 @@ void Station::begin() {
     goal_ = msg.goal ? msg.goal : 1;
     lastReported_ = msg.progress;
     task_->start(msg.goal, msg.progress, msg.param);
-    display_.setProgress(msg.progress, goal_);
+    setDisplayProgress(msg.progress, goal_);
     state_ = State::Active;
     Serial.printf("Task started: %u/%u\n", msg.progress, msg.goal);
   });
@@ -43,13 +64,13 @@ void Station::begin() {
     session_.heardServer(mac);
     if (state_ != State::Awaiting || !oc::sameTag(msg.tag, tag_)) return;
     state_ = State::Rejected;
-    display_.flash(oc::DisplayMode::Reject);
+    flashDisplay(oc::DisplayMode::Reject);
     Serial.println("Server rejected the tag");
   });
 
   oc::on<oc::MsgType::SetDisplay>([this](const uint8_t *mac, const oc::SetDisplayMsg &msg) {
     session_.heardServer(mac);
-    display_.setMode(msg.mode, msg.level);
+    setDisplayMode(msg.mode, msg.level);
   });
 
   oc::onSendFailed([](const uint8_t *mac, oc::MsgType type) {
@@ -81,7 +102,7 @@ void Station::onRemoved(const tagreader::Uid &uid) {
   oc::TagId gone = tagOf(uid);
   uint16_t progress = (state_ == State::Active && task_) ? task_->progress() : 0;
   if (task_) task_->stop();
-  display_.clearProgress();
+  clearDisplayProgress();
   state_ = State::Empty;
   session_.send<oc::MsgType::TagRemoved>({gone, progress});
   Serial.print("Tag removed: ");
@@ -91,7 +112,7 @@ void Station::onRemoved(const tagreader::Uid &uid) {
 
 void Station::reportProgress(uint32_t now) {
   uint16_t progress = task_->progress();
-  display_.setProgress(progress, goal_);
+  setDisplayProgress(progress, goal_);
   if (progress == lastReported_ || (int32_t)(now - nextProgressAt_) < 0) return;
   lastReported_ = progress;
   nextProgressAt_ = now + kProgressIntervalMs;
@@ -112,8 +133,8 @@ void Station::update(uint32_t now) {
   if (state_ == State::Active) {
     if (task_->done()) {
       session_.send<oc::MsgType::TaskDone>({tag_});
-      display_.clearProgress();
-      display_.flash(oc::DisplayMode::Success);
+      clearDisplayProgress();
+      flashDisplay(oc::DisplayMode::Success);
       state_ = State::Finished;
       Serial.println("Task done, told server");
     } else {
@@ -122,6 +143,27 @@ void Station::update(uint32_t now) {
   }
 
   display_.update(now);
+  if (extraDisplay_) extraDisplay_->update(now);
+}
+
+void Station::setDisplayMode(oc::DisplayMode mode, uint8_t level) {
+  display_.setMode(mode, level);
+  if (extraDisplay_) extraDisplay_->setMode(mode, level);
+}
+
+void Station::flashDisplay(oc::DisplayMode mode) {
+  display_.flash(mode);
+  if (extraDisplay_) extraDisplay_->flash(mode);
+}
+
+void Station::setDisplayProgress(uint16_t value, uint16_t goal) {
+  display_.setProgress(value, goal);
+  if (extraDisplay_) extraDisplay_->setProgress(value, goal);
+}
+
+void Station::clearDisplayProgress() {
+  display_.clearProgress();
+  if (extraDisplay_) extraDisplay_->clearProgress();
 }
 
 } // namespace station

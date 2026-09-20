@@ -6,35 +6,40 @@
 //   1. offline    - server not answering: one red pixel blinks slowly
 //   2. a flash    - one-shot Calibrated / Success / Reject, then back to 3.
 //   3. the base   - the last persistent mode from the server (Idle, Cooking,
-//                   Warning, Burnt, GameOver). Idle shows the task's progress
-//                   bar while a task is running, and nothing otherwise.
+//                   Warning, Burnt, GameOver, PatternCue). Idle shows the task's
+//                   progress bar while a task is running, and nothing otherwise.
+//                   PatternCue fills the strip in the colour of the joystick
+//                   pattern to do now (see patternColor in Display.cpp).
 
 #include <Adafruit_NeoPixel.h>
 #include <OvercookedComm.h>
 
+#include "DisplaySink.h"
+
 namespace station {
 
-class Display {
+class Display : public DisplaySink {
  public:
   // brightness: 0-255, applied to every colour.
   explicit Display(Adafruit_NeoPixel &strip, uint8_t brightness = 80)
       : strip_(strip), brightness_(brightness) {}
 
-  void begin();
-  void update(uint32_t now);
+  void begin() override;
+  void update(uint32_t now) override;
 
   // From the server. Calibrated / Success / Reject flash once; the rest stay
-  // until the next setMode. level is only used by Cooking (0-255).
-  void setMode(oc::DisplayMode mode, uint8_t level);
+  // until the next setMode. level is used by Cooking (0-255) and PatternCue
+  // (pattern id, +6 to blink).
+  void setMode(oc::DisplayMode mode, uint8_t level) override;
 
   // Local flash, e.g. celebrating a finished task without waiting for the server.
-  void flash(oc::DisplayMode mode);
+  void flash(oc::DisplayMode mode) override;
 
   // Task progress bar: value out of goal. clearProgress() hides it.
-  void setProgress(uint16_t value, uint16_t goal);
-  void clearProgress();
+  void setProgress(uint16_t value, uint16_t goal) override;
+  void clearProgress() override;
 
-  void setOffline(bool offline) { offline_ = offline; }
+  void setOffline(bool offline) override { offline_ = offline; }
 
  private:
   static constexpr uint8_t kMaxPixels = 16;

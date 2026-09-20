@@ -57,8 +57,8 @@ def _process(game: "Game", item: Item, station_name: str) -> Process | None:
 
 
 class TaskStation(Behavior):
-    """Cutting board, pan: the station measures input (presses, joystick
-    steps) until the server's goal is reached."""
+    """Cutting board: the station measures input (presses) until the server's
+    goal is reached."""
 
     def __init__(self, kind: StationKind, name: str, task: TaskKind):
         self.kind, self.name, self.task = kind, name, task
@@ -69,10 +69,7 @@ class TaskStation(Behavior):
             game.reject(station, item, f"{item.label} ({item.state.value}) cannot go on a {self.name.replace('_', ' ')}")
             return
         progress = item.progress if item.progress_kind == self.name else 0
-        game.accept(
-            station, item, task=self.task, goal=proc.goal, progress=progress,
-            param=PATTERN_IDS.get(proc.pattern, 0),
-        )
+        game.accept(station, item, task=self.task, goal=proc.goal, progress=progress)
         game.log(f"{station.label}: {item.label} on, {progress}/{proc.goal}")
 
     def on_progress(self, game, station, item, value):
@@ -105,6 +102,117 @@ class TaskStation(Behavior):
         if item and proc:
             return {"progress": min(1.0, item.progress / proc.goal)}
         return {}
+
+
+class SimonPan(Behavior):
+    """Pan, Simon Says style: the server asks for one joystick gesture at a
+    time, picked at random (never the same one twice running), and picks the
+    next one as soon as the station reports a correct step. The clock is real
+    and server-side, like the pot: `seconds` to land `goal` gestures, each one
+    giving some time back (bonus_s x chain, up to bonus_cap_s), and it burns
+    when time runs out. The gesture count lives in item.progress (so it resumes
+    on any pan), the time used in item.pan_ms.
+
+    The station cannot tell a wrong gesture from no gesture, so there is no
+    miss penalty: a wrong move just does not count, and the clock keeps running."""
+
+    kind = StationKind.PAN
+    name = "pan"
+    LOW_TIME_FRACTION = 0.2  # of seconds left, then the cue blinks
+    PATTERN_KEY = "pan_pattern"  # station.data: the gesture asked for right now
+
+    def _cfg(self, game, item) -> Process | None:
+        return _process(game, item, self.name)
+
+    def _retarget(self, game, station, item, proc):
+        pool = proc.patterns or tuple(PATTERN_IDS)
+        last = station.data.get(self.PATTERN_KEY)
+        pattern = game.rng.choice([pt for pt in pool if pt != last] or list(pool))
+        station.data[self.PATTERN_KEY] = pattern
+        game.accept(
+            station, item, task=TaskKind.JOYSTICK_PATTERN, goal=proc.goal,
+            progress=item.progress, param=PATTERN_IDS[pattern],
+        )
+        return pattern
+
+    def on_placed(self, game, station, item):
+        proc = self._cfg(game, item)
+        if proc is None:
+            game.reject(station, item, f"{item.label} ({item.state.value}) cannot go in the pan")
+            return
+        if item.progress_kind != self.name:
+            item.progress, item.pan_ms, item.progress_kind = 0, 0, self.name
+        pattern = self._retarget(game, station, item, proc)
+        game.log(f"{station.label}: {item.label} on, {item.progress}/{proc.goal}, do a {pattern}")
+
+    def on_progress(self, game, station, item, value):
+        proc = self._cfg(game, item)
+        if proc is None or value <= item.progress:  # stale or repeated report
+            return
+        item.progress = min(value, proc.goal)
+        item.progress_kind = self.name
+        if proc.bonus_s:
+            bonus = min(proc.bonus_cap_s or float("inf"), proc.bonus_s * item.progress)
+            item.pan_ms = max(0, item.pan_ms - int(bonus * 1000))
+        if item.progress < proc.goal:
+            self._retarget(game, station, item, proc)
+
+    def on_removed(self, game, station, item, progress):
+        proc = self._cfg(game, item)
+        if proc is None:  # finished, burnt or gone
+            return
+        item.progress = min(max(progress, item.progress), proc.goal)
+        item.progress_kind = self.name
+        game.log(f"{station.label}: {item.label} picked up at {item.progress}/{proc.goal}")
+
+    def on_done(self, game, station, item):
+        proc = self._cfg(game, item)
+        if proc is None:
+            return
+        item.state = proc.to_state
+        item.progress, item.pan_ms, item.progress_kind = 0, 0, None
+        game.log(f"{station.label}: {item.label} is {item.state.value}", "ok")
+
+    def tick(self, game, station, dt):
+        item = game.items.get(station.accepted) if station.accepted else None
+        proc = self._cfg(game, item) if item else None
+        if proc is None:
+            return
+        item.pan_ms += int(dt * 1000)
+        if item.pan_ms >= proc.seconds * 1000:
+            item.state = ItemState.BURNT
+            game.log(f"{station.label}: {item.label} burnt, out of time!", "burn")
+
+    def _remaining(self, proc, item) -> float:
+        return max(0.0, proc.seconds - item.pan_ms / 1000)
+
+    def display(self, game, station):
+        item = game.items.get(station.accepted) if station.accepted else None
+        if item is None or item.is_plate:
+            return DisplayMode.IDLE, 0
+        if item.state == ItemState.BURNT:
+            return DisplayMode.BURNT, 0
+        proc = self._cfg(game, item)
+        pattern = station.data.get(self.PATTERN_KEY)
+        if proc is None or pattern is None:
+            return DisplayMode.IDLE, 0
+        low = self._remaining(proc, item) <= proc.seconds * self.LOW_TIME_FRACTION
+        return DisplayMode.PATTERN_CUE, PATTERN_IDS[pattern] + (len(PATTERN_IDS) if low else 0)
+
+    def describe(self, game, station):
+        item = game.items.get(station.accepted) if station.accepted else None
+        if item is None or item.is_plate:
+            return {}
+        if item.state == ItemState.BURNT:
+            return {"progress": 1.0, "note": "burnt"}
+        proc = self._cfg(game, item)
+        if proc is None:
+            return {}
+        pattern = station.data.get(self.PATTERN_KEY, "?")
+        return {
+            "progress": min(1.0, item.progress / proc.goal),
+            "note": f"do a {pattern}, burns in {self._remaining(proc, item):.0f}s",
+        }
 
 
 class Pot(Behavior):
@@ -231,7 +339,7 @@ class Delivery(Behavior):
 
 BEHAVIORS: dict[StationKind, Behavior] = {
     StationKind.CUTTING_BOARD: TaskStation(StationKind.CUTTING_BOARD, "cutting_board", TaskKind.PRESSES),
-    StationKind.PAN: TaskStation(StationKind.PAN, "pan", TaskKind.JOYSTICK_PATTERN),
+    StationKind.PAN: SimonPan(),
     StationKind.POT: Pot(),
     StationKind.PLATE: PlateStation(),
     StationKind.DELIVERY: Delivery(),

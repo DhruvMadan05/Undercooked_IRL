@@ -24,7 +24,8 @@ def test_pot_states_can_be_overridden():
 @pytest.mark.parametrize("data,text", [
     ({"stations": {"blender": 1}}, "unknown station"),
     ({"ingredient": {"x": {"cutting_board": {}}}}, "goal must be"),
-    ({"ingredient": {"x": {"pan": {"goal": 3, "pattern": "spiral"}}}}, "unknown pattern"),
+    ({"ingredient": {"x": {"pan": {"goal": 3, "seconds": 10, "patterns": ["spiral"]}}}}, "unknown pattern"),
+    ({"ingredient": {"x": {"pan": {"goal": 3}}}}, "seconds must be"),
     ({"ingredient": {"x": {"pot": {"burn_after": 3}}}}, "seconds must be"),
     ({"ingredient": {"x": {"grill": {"goal": 3}}}}, "unknown key"),
     ({"ingredient": {"x": {"count": 0}}}, "count must be"),

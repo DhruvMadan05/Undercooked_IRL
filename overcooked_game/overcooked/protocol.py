@@ -53,6 +53,7 @@ class DisplayMode(IntEnum):
     REJECT = 6
     DISCONNECTED = 7
     GAME_OVER = 8
+    PATTERN_CUE = 9  # level = pattern id to do now; +6 blinks it (time running out)
 
 
 # Names used in level.toml and the UI.
