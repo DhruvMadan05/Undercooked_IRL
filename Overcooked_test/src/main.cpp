@@ -1,142 +1,20 @@
 #include <Arduino.h>
-#include <SPI.h>
-#include <MFRC522.h>
-#include <WiFi.h>
-#include <esp_now.h>
-#include <Adafruit_NeoPixel.h>
+#include "FryingPanSimonSays.h"
+#include "JoystickTest.h"
+#include "RfidTagReader.h"
 
-// Standard RC522 breakout (SDA/SCK/MOSI/MISO/IRQ/GND/RST/3.3V) only
-// supports SPI, not I2C. On the ESP32-WROVER-IE dev board every RC522
-// signal is wired to the LEFT-hand header, using the GPIO matrix to
-// remap SPI onto pins 32/33/25/26 (top to bottom on the header):
-//   RC522 SDA  -> GPIO32  (SS/CS)
-//   RC522 SCK  -> GPIO33
-//   RC522 MOSI -> GPIO25
-//   RC522 MISO -> GPIO26
-//   RC522 RST  -> GPIO27
-//   RC522 GND  -> GND     (left header, between GPIO12 and GPIO13)
-//   RC522 3.3V -> 3V3     (top of left header; NOT 5V, the chip is not 5V tolerant)
-//   RC522 IRQ  -> not connected
+// Joystick wiring confirmed via JoystickTest - now running the actual game.
+// Swap back to joystickTestSetup()/joystickTestLoop() to re-test wiring, or
+// rfidSetup()/rfidLoop() for the RFID tag reader.
 //
-// Deliberately skipped on the left header: GPIO34/35/36(VP)/39(VN) are
-// input-only, GPIO12 is a boot strapping pin, and GPIO9/10/11 (D2/D3/CMD)
-// are wired to the module's flash.
-#define SS_PIN   32
-#define SCK_PIN  33
-#define MOSI_PIN 25
-#define MISO_PIN 26
-#define RST_PIN  27
-
-// WS2812B strip (5 pixels), also on the left header:
-//   Strip DIN -> GPIO13   (via ~330 ohm series resistor, next to the GND pin)
-//   Strip 5V  -> 5V       (bottom pin of left header, USB 5V)
-//   Strip GND -> GND      (must share ground with the ESP32)
-// Despite the "SPI" in the product name, WS2812B is a single-wire protocol:
-// only DIN is needed (DOUT is for chaining more pixels).
-#define LED_PIN   13
-#define LED_COUNT 5
-#define LED_HOLD_MS 1000 // how long the pixels stay lit after a scan
-
-MFRC522 rfid(SS_PIN, RST_PIN);
-Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
-uint32_t ledOffAt = 0; // millis() deadline to turn the pixels off, 0 = already off
-
-// This exact firmware runs on both boards. Each one reads its own RC522
-// and broadcasts the UID over ESP-NOW; broadcasting (instead of sending
-// to one hardcoded MAC) means neither board needs to know the other's
-// address ahead of time.
-uint8_t broadcastAddress[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-
-typedef struct {
-  uint8_t size;
-  uint8_t uid[10]; // MFRC522 UIDs are at most 10 bytes
-} TagMessage;
-
-TagMessage outgoing;
-
-void printUidHex(const uint8_t *uid, uint8_t size) {
-  for (uint8_t i = 0; i < size; i++) {
-    Serial.printf(" %02X", uid[i]);
-  }
-}
-
-// Light all pixels in a colour derived from the tag UID, so the same tag
-// always gives the same colour.
-void showTag(const uint8_t *uid, uint8_t size) {
-  uint8_t hash = 0;
-  for (uint8_t i = 0; i < size; i++) hash = hash * 31 + uid[i];
-  uint16_t hue = (uint16_t)hash * 257; // spread 0-255 over the 0-65535 hue wheel
-  strip.fill(strip.gamma32(strip.ColorHSV(hue, 255, 80)));
-  strip.show();
-  ledOffAt = millis() + LED_HOLD_MS;
-}
-
-void onDataRecv(const uint8_t *mac, const uint8_t *data, int len) {
-  if (len != sizeof(TagMessage)) return;
-  const TagMessage *msg = (const TagMessage *)data;
-
-  Serial.printf("Received tag from %02X:%02X:%02X:%02X:%02X:%02X - UID:",
-                mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-  printUidHex(msg->uid, msg->size);
-  Serial.println();
-}
+// TODO: FryingPanSimonSays.cpp still needs real calibration and likely more
+// edits once the joystick/pan/screens are mechanically assembled into the
+// actual prop - current tunables are best-guess from a bare dev board.
 
 void setup() {
-  Serial.begin(115200);
-
-  strip.begin();
-  strip.clear();
-  strip.show();
-
-  SPI.begin(SCK_PIN, MISO_PIN, MOSI_PIN, -1); // CS is driven by MFRC522 via SS_PIN
-  rfid.PCD_Init();
-
-  WiFi.mode(WIFI_STA);
-  WiFi.disconnect();
-
-  if (esp_now_init() != ESP_OK) {
-    Serial.println("ESP-NOW init failed");
-    while (true) delay(1000);
-  }
-
-  esp_now_register_recv_cb(onDataRecv);
-
-  esp_now_peer_info_t peerInfo = {};
-  memcpy(peerInfo.peer_addr, broadcastAddress, 6);
-  peerInfo.channel = 0;
-  peerInfo.encrypt = false;
-  if (esp_now_add_peer(&peerInfo) != ESP_OK) {
-    Serial.println("Failed to add broadcast peer");
-  }
-
-  Serial.print("My MAC: ");
-  Serial.println(WiFi.macAddress());
-  Serial.println("RC522 ready. Scan a card...");
+  fryingPanSetup();
 }
 
 void loop() {
-  if (ledOffAt && (int32_t)(millis() - ledOffAt) >= 0) {
-    strip.clear();
-    strip.show();
-    ledOffAt = 0;
-  }
-
-  if (!rfid.PICC_IsNewCardPresent() || !rfid.PICC_ReadCardSerial()) {
-    Serial.println("No tag detected");
-    delay(100);
-    return;
-  }
-
-  Serial.print("UID:");
-  printUidHex(rfid.uid.uidByte, rfid.uid.size);
-  Serial.println();
-
-  showTag(rfid.uid.uidByte, rfid.uid.size);
-
-  outgoing.size = rfid.uid.size;
-  memcpy(outgoing.uid, rfid.uid.uidByte, rfid.uid.size);
-  esp_now_send(broadcastAddress, (uint8_t *)&outgoing, sizeof(outgoing));
-
-  rfid.PICC_HaltA();
-  rfid.PCD_StopCrypto1();
+  fryingPanLoop();
 }
