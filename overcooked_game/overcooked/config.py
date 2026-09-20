@@ -59,6 +59,7 @@ class Level:
     max_orders: int
     order_time_s: float
     expire_penalty: int
+    dump_penalty: int
     time_bonus: int
     respawn_s: float
     plate_capacity: int
@@ -139,6 +140,7 @@ def parse_level(data: dict) -> Level:
         max_orders=int(lv.get("max_orders", 4)),
         order_time_s=order_time,
         expire_penalty=int(lv.get("expire_penalty", 10)),
+        dump_penalty=int(lv.get("dump_penalty", 5)),
         time_bonus=int(lv.get("time_bonus", 20)),
         respawn_s=float(lv.get("respawn_s", 3)),
         plate_capacity=int(lv.get("plate_capacity", 4)),

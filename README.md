@@ -70,8 +70,11 @@ recipes in it are placeholders.
 Rules worth knowing: progress stays on the server, so food can be picked up and put back,
 even on another station of the same kind; cooking in a pot is timed and burns if left in;
 a plate reader *is* a plate: put food on it whenever and it goes onto that plate, and touching that
-plate's own tag to the delivery station serves what is on it; delivered food comes back
-as raw after a few seconds; loose food put on the delivery station is thrown away
+plate's own tag to the delivery station serves what is on it. If it matches an open order that
+scores; if not, the plate is dumped for a small penalty (`dump_penalty`). Either way the plate reader
+flashes green (served) or red (dumped) and then glows dull brown while the plate is dirty (solid green when clean), the food comes back as raw after a few seconds, and the plate is
+*dirty*: it takes no food and cannot be served until it is washed (a sink is planned; a new round or
+Reset cleans every plate); loose food put on the delivery station is thrown away
 (the way to recycle burnt food).
 
 ## Bridge serial protocol

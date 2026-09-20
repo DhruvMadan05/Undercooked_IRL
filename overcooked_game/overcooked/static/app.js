@@ -188,7 +188,7 @@ function renderLog(s) {
 
 function renderItems(s) {
   setHTML($("items"), s.items.map((it) =>
-    `<span class="item ${esc(it.state)}" title="${esc(it.uid)}">${esc(it.label)} · ${esc(it.state)}${it.contents.length ? " [" + esc(it.contents.join(", ")) + "]" : ""}</span>`
+    `<span class="item ${esc(it.state)}" title="${esc(it.uid)}">${esc(it.label)} · ${it.dirty ? "dirty" : esc(it.state)}${it.contents.length ? " [" + esc(it.contents.join(", ")) + "]" : ""}</span>`
   ).join("") || `<span class="empty">none enrolled</span>`);
 }
 
