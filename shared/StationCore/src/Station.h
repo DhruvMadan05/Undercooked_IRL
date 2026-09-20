@@ -23,7 +23,7 @@ namespace station {
 
 class Station {
  public:
-  // task may be null for a station with no input task (pot, plate, delivery).
+  // task may be null for a station with no input task (plate, delivery).
   Station(oc::StationKind kind, tagreader::PresenceReader &reader, Display &display,
           StationTask *task = nullptr)
       : reader_(reader), display_(display), task_(task), session_(kind) {}

@@ -22,7 +22,6 @@ class ItemState(str, Enum):
     RAW = "raw"
     CHOPPED = "chopped"
     COOKED = "cooked"
-    BURNT = "burnt"
     CONSUMED = "consumed"  # on a delivered plate / trashed, back to RAW after respawn_s
 
 
@@ -43,7 +42,7 @@ class Item:
     uid: bytes
     ingredient: str | None  # None = plate
     state: ItemState = ItemState.RAW
-    progress: int = 0                # task units, or milliseconds in a pot
+    progress: int = 0                # task units, or milliseconds of scrubbing for a plate
     progress_kind: str | None = None  # station kind the progress belongs to
     respawn_at: float | None = None
     contents: list[PlateEntry] = field(default_factory=list)  # plates only

@@ -66,10 +66,10 @@ struct OC_PACKED TagId {
 };
 
 // What kind of station a device is. Compiled into each station's firmware.
+// Values are part of the wire format: 2 was the pot, now retired, so leave it unused.
 enum class StationKind : uint8_t {
   CuttingBoard = 0,
   Pan = 1,
-  Pot = 2,
   Plate = 3,
   Delivery = 4,
   Fryer = 5,
@@ -94,12 +94,10 @@ enum class Pattern : uint8_t {
 };
 
 // What the LEDs show when no task is drawing its own progress.
+// Values are part of the wire format: 2-4 were the pot's cooking / warning / burnt, now retired.
 enum class DisplayMode : uint8_t {
   Idle = 0,
   Calibrated = 1,
-  Cooking = 2, // level = progress 0-255
-  Warning = 3, // about to burn
-  Burnt = 4,
   Success = 5,
   Reject = 6,
   Disconnected = 7,

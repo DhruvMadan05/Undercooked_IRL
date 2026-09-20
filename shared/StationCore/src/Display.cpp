@@ -45,13 +45,12 @@ uint8_t Display::litFor(uint32_t value, uint32_t goal, uint8_t count) const {
   return (value * count + goal - 1) / goal;
 }
 
-void Display::setMode(DisplayMode mode, uint8_t level) {
+void Display::setMode(DisplayMode mode, uint8_t /*level*/) {
   if (isFlash(mode)) {
     flash(mode);
     return;
   }
   base_ = mode;
-  baseLevel_ = level;
 }
 
 void Display::flash(DisplayMode mode) {
@@ -95,20 +94,6 @@ void Display::update(uint32_t now) {
           uint8_t lit = litFor(progress_, goal_, n);
           for (uint8_t i = 0; i < lit; i++) frame[i] = color(0, 0, 255);
         }
-        break;
-      case DisplayMode::Cooking: {
-        uint8_t lit = litFor(baseLevel_, 255, n);
-        if (lit == 0) lit = 1;
-        for (uint8_t i = 0; i < lit; i++) frame[i] = color(255, 100, 0);
-        break;
-      }
-      case DisplayMode::Warning:
-        if ((now / 250) % 2 == 0) {
-          for (uint8_t i = 0; i < n; i++) frame[i] = color(255, 60, 0);
-        }
-        break;
-      case DisplayMode::Burnt:
-        for (uint8_t i = 0; i < n; i++) frame[i] = color(255, 0, 0);
         break;
       case DisplayMode::GameOver:
         for (uint8_t i = 0; i < n; i++) frame[i] = color(255, 255, 255);

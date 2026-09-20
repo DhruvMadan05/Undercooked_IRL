@@ -14,7 +14,7 @@ laptop runs the game and shows the scoreboard.
 | `overcooked_pan/` | Frying pan station firmware (joystick moved in a circle / zigzag pattern) |
 | `deep_fryer_station/` | Deep fryer station firmware (keep a hand's height, read by an HC-SR04, aligned with a roaming target shown on an OLED) |
 | `sink_station/` | Sink station firmware: washes a dirty plate when a joystick is scrubbed in circles |
-| `overcooked_reader_station/` | Pot, plate and delivery stations: reader + LEDs only, one project with an environment per kind. A plate station is the plate itself (food goes on it); each plate also has a tag, touched to the delivery station to serve |
+| `overcooked_reader_station/` | Plate and delivery stations: reader + LEDs only, one project with an environment per kind. A plate station is the plate itself (food goes on it); each plate also has a tag, touched to the delivery station to serve |
 | `overcooked_server/` | Bridge firmware: ESP-NOW <-> USB serial, plus its own RC522 for calibration |
 | `shared/OvercookedComm/` | ESP-NOW protocol (typed messages, acks, retries) |
 | `shared/TagReader/` | RC522 wrapper with tag placed / removed detection |
@@ -40,7 +40,7 @@ The page has a simulator panel: virtual stations you can place tags on, and an
 
 1. Flash `overcooked_server` to the bridge ESP32 and each station firmware to its ESP32
    (`pio run -t upload` in each folder; in `overcooked_reader_station` pick the kind with
-   `-e pot`, `-e plate` or `-e delivery`).
+   `-e plate` or `-e delivery`).
 2. `python -m overcooked --list-ports`, then `python -m overcooked --port /dev/cu.usbserial-XXXX`.
 3. Open the page. Stations show up as they power on (green dot = heard within 3.5 s).
 
@@ -68,18 +68,17 @@ The result is saved to `overcooked_game/calibration.json`.
 
 `overcooked_game/level.toml` holds everything you would tune: round length, how many of
 each station, how many tags per ingredient, how much work each ingredient needs
-(presses, joystick steps, cooking seconds), the menu and the scoring. The ingredients and
+(presses, joystick steps, fryer goal), the menu and the scoring. The ingredients and
 recipes in it are placeholders.
 
 Rules worth knowing: progress stays on the server, so food can be picked up and put back,
-even on another station of the same kind; cooking in a pot is timed and burns if left in;
+even on another station of the same kind;
 a plate reader *is* a plate: put food on it whenever and it goes onto that plate, and touching that
 plate's own tag to the delivery station serves what is on it. If it matches an open order that
 scores; if not, the plate is dumped for a small penalty (`dump_penalty`). Either way the plate reader
 flashes green (served) or red (dumped) and then glows dull brown while the plate is dirty (solid green when clean), the food comes back as raw after a few seconds, and the plate is
 *dirty*: it takes no food and cannot be served until it is washed (wash it at the sink: touch the plate's tag there and scrub the joystick in circles for `wash_s`
-seconds, and the plate reader goes green again; a new round or Reset also cleans every plate); loose food put on the delivery station is thrown away
-(the way to recycle burnt food).
+seconds, and the plate reader goes green again; a new round or Reset also cleans every plate); loose food put on the delivery station is thrown away.
 
 ## Bridge serial protocol
 

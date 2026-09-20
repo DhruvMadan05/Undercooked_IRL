@@ -7,7 +7,7 @@
 //   void setup() { Serial.begin(115200); board.begin(); }
 //   void loop()  { board.update(millis()); }
 //
-// Pass no task for a station with nothing to measure (pot, plate, delivery).
+// Pass no task for a station with nothing to measure (plate, delivery).
 
 #include <Adafruit_NeoPixel.h>
 #include <MFRC522.h>

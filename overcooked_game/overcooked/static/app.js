@@ -1,6 +1,6 @@
 "use strict";
 
-const ICONS = { cutting_board: "🔪", pan: "🍳", pot: "🍲", deep_fryer: "🍟", plate: "🍽️", delivery: "🛎️", sink: "🧼" };
+const ICONS = { cutting_board: "🔪", pan: "🍳", deep_fryer: "🍟", plate: "🍽️", delivery: "🛎️", sink: "🧼" };
 const PHASE_LABEL = {
   cal_master: "Calibration 1/3", cal_stations: "Calibration 2/3", cal_food: "Calibration 3/3",
   ready: "Ready", countdown: "Get ready", playing: "Playing", ended: "Round over",
@@ -162,7 +162,7 @@ function renderStations(s) {
     const what = st.item
       ? `${esc(st.item)} <span class="tag-state">${esc(st.item_state || "")}</span>`
       : `<span class="empty">empty</span>`;
-    const pct = st.progress != null ? `<div class="bar ${st.note === "burnt" ? "low" : ""}"><i style="width:${Math.round(100 * st.progress)}%"></i></div>` : "";
+    const pct = st.progress != null ? `<div class="bar"><i style="width:${Math.round(100 * st.progress)}%"></i></div>` : "";
     return `<div class="station ${st.online ? "" : "offline"}">
       <div class="head"><span class="icon">${ICONS[st.kind] || "?"}</span>
         <span class="name">${esc(st.label)}</span><span class="dot ${st.online ? "on" : ""}" title="${st.online ? "online" : "offline"}"></span></div>
@@ -271,7 +271,6 @@ function playSounds(s) {
   if (lastLogId === null) { lastLogId = newest; return; } // don't replay history on load
   for (const e of s.log.filter((x) => x.id > lastLogId)) {
     if (e.kind === "score") { beep(660, 0.12); beep(880, 0.12, "sine", 0.12); beep(1320, 0.25, "sine", 0.24); }
-    else if (e.kind === "burn") beep(140, 0.6, "sawtooth");
     else if (e.kind === "order") beep(520, 0.12, "triangle");
     else if (e.kind === "warn") beep(220, 0.12, "square");
     else if (e.kind === "ok") beep(740, 0.08, "triangle");

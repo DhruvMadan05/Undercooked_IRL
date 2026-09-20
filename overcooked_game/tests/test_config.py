@@ -15,10 +15,17 @@ def test_shipped_level_loads():
     assert (tomato.from_state, tomato.to_state) == (ItemState.RAW, ItemState.CHOPPED)
 
 
-def test_pot_states_can_be_overridden():
-    level = parse_level({"ingredient": {"veg": {"pot": {"seconds": 5, "from": "chopped"}}}})
-    proc = level.ingredients["veg"].processes["pot"]
+def test_states_can_be_overridden():
+    level = parse_level({"ingredient": {"veg": {"pan": {"goal": 5, "from": "chopped"}}}})
+    proc = level.ingredients["veg"].processes["pan"]
     assert (proc.from_state, proc.to_state) == (ItemState.CHOPPED, ItemState.COOKED)
+
+
+def test_pot_is_gone():
+    with pytest.raises(ConfigError, match="unknown station"):
+        parse_level({"stations": {"pot": 1}})
+    with pytest.raises(ConfigError, match="unknown key"):
+        parse_level({"ingredient": {"rice": {"pot": {"seconds": 5}}}})
 
 
 def test_wash_time_defaults_and_is_limited():
@@ -33,7 +40,6 @@ def test_wash_time_defaults_and_is_limited():
     ({"stations": {"blender": 1}}, "unknown station"),
     ({"ingredient": {"x": {"cutting_board": {}}}}, "goal must be"),
     ({"ingredient": {"x": {"pan": {"goal": 3, "pattern": "spiral"}}}}, "unknown pattern"),
-    ({"ingredient": {"x": {"pot": {"burn_after": 3}}}}, "seconds must be"),
     ({"ingredient": {"x": {"grill": {"goal": 3}}}}, "unknown key"),
     ({"ingredient": {"x": {"count": 0}}}, "count must be"),
     ({"recipe": {"r": {"needs": ["ghost:raw"]}}}, "unknown ingredient"),

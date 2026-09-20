@@ -5,8 +5,8 @@
 // What is on the strip, highest priority first:
 //   1. offline    - server not answering: one red pixel blinks slowly
 //   2. a flash    - one-shot Calibrated / Success / Reject, then back to 3.
-//   3. the base   - the last persistent mode from the server (Idle, Cooking,
-//                   Warning, Burnt, GameOver, PlateClean, PlateDirty). Idle shows
+//   3. the base   - the last persistent mode from the server (Idle, GameOver,
+//                   PlateClean, PlateDirty). Idle shows
 //                   the task's progress bar while a task is running, and nothing
 //                   otherwise.
 
@@ -25,7 +25,7 @@ class Display {
   void update(uint32_t now);
 
   // From the server. Calibrated / Success / Reject flash once; the rest stay
-  // until the next setMode. level is only used by Cooking (0-255).
+  // until the next setMode. level is part of the wire format but no mode uses it now.
   void setMode(oc::DisplayMode mode, uint8_t level);
 
   // Local flash, e.g. celebrating a finished task without waiting for the server.
@@ -49,7 +49,6 @@ class Display {
   bool offline_ = false;
 
   oc::DisplayMode base_ = oc::DisplayMode::Idle;
-  uint8_t baseLevel_ = 0;
 
   bool progressShown_ = false;
   uint16_t progress_ = 0;

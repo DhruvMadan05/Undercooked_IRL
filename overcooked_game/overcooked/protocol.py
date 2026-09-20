@@ -32,7 +32,6 @@ class MsgType(IntEnum):
 class StationKind(IntEnum):
     CUTTING_BOARD = 0
     PAN = 1
-    POT = 2
     PLATE = 3
     DELIVERY = 4
     FRYER = 5
@@ -50,9 +49,6 @@ class TaskKind(IntEnum):
 class DisplayMode(IntEnum):
     IDLE = 0
     CALIBRATED = 1
-    COOKING = 2
-    WARNING = 3
-    BURNT = 4
     SUCCESS = 5
     REJECT = 6
     DISCONNECTED = 7
@@ -65,7 +61,6 @@ class DisplayMode(IntEnum):
 KIND_NAMES = {
     StationKind.CUTTING_BOARD: "cutting_board",
     StationKind.PAN: "pan",
-    StationKind.POT: "pot",
     StationKind.PLATE: "plate",
     StationKind.DELIVERY: "delivery",
     StationKind.FRYER: "deep_fryer",

@@ -49,7 +49,7 @@ def test_stations_appear_in_the_state(client):
         deadline = time.time() + 5
         while time.time() < deadline:
             state = ws.receive_json()
-            if state["type"] == "state" and len(state["stations"]) == 7:
+            if state["type"] == "state" and len(state["stations"]) == 6:
                 return
         pytest.fail("stations never registered")
 

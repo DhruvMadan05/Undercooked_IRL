@@ -1,6 +1,6 @@
 import pytest
 
-from conftest import BUN, CUT, DEL, FRY, MASTER, PAN, PATTY, PLATE, PLT, POT, POTATO, RICE, SNK, STRAY, TOMATO1, TOMATO2
+from conftest import BUN, CUT, DEL, FRY, MASTER, PAN, PATTY, PLATE, PLT, POTATO, SNK, STRAY, TOMATO1, TOMATO2
 
 from overcooked import protocol as p
 from overcooked.model import ItemState, Order, Phase
@@ -180,65 +180,6 @@ def test_deep_fryer_rejects_tomato(h):
     assert h.last(FRY, p.Reject) is not None
 
 
-# ---- pot ----------------------------------------------------------------------------------
-
-def test_pot_cooks_then_burns(h):
-    h.start_round()
-    h.place(POT, RICE)
-    assert h.last(POT, p.Accept).task == p.TaskKind.NONE
-
-    h.advance(5)
-    assert h.item(RICE).state == ItemState.RAW
-    mode, level = h.game._desired_display(h.game.stations[POT])
-    assert mode == p.DisplayMode.COOKING and 100 < level < 160
-
-    h.advance(5.5)
-    assert h.item(RICE).state == ItemState.COOKED
-    assert h.game._desired_display(h.game.stations[POT])[0] == p.DisplayMode.COOKING
-
-    h.advance(6.5)  # 6 s after cooked: past 60% of burn_after
-    assert h.game._desired_display(h.game.stations[POT])[0] == p.DisplayMode.WARNING
-
-    h.advance(4.5)
-    assert h.item(RICE).state == ItemState.BURNT
-    assert h.game._desired_display(h.game.stations[POT])[0] == p.DisplayMode.BURNT
-
-
-def test_pot_pushes_display_changes_to_the_station(h):
-    h.start_round()
-    h.place(POT, RICE)
-    h.clear()
-    h.advance(2)
-    displays = h.to(POT, p.SetDisplay)
-    assert displays and displays[-1].mode == p.DisplayMode.COOKING
-    assert displays[-1].level > displays[0].level or len(displays) == 1
-    h.clear()
-    h.advance(0.3)
-    assert len(h.to(POT, p.SetDisplay)) <= 3  # only on change, not every tick
-
-
-def test_pot_time_is_kept_when_food_is_taken_out(h):
-    h.start_round()
-    h.place(POT, RICE)
-    h.advance(6)
-    h.remove(POT, RICE)
-    h.advance(20)  # out of the pot: nothing happens
-    assert h.item(RICE).state == ItemState.RAW
-    h.place(POT, RICE)
-    h.advance(4.5)
-    assert h.item(RICE).state == ItemState.COOKED
-
-
-def test_cooked_food_does_not_go_back_in_the_pot(h):
-    h.start_round()
-    h.place(POT, RICE)
-    h.advance(10.5)
-    h.remove(POT, RICE)
-    h.clear()
-    h.place(POT, RICE)
-    assert h.last(POT, p.Reject) is not None
-
-
 # ---- plate + delivery ------------------------------------------------------------------------
 
 def test_food_goes_on_the_plate_with_no_plate_scan(h):
@@ -313,7 +254,7 @@ def test_a_plate_nobody_ordered_is_dumped_for_a_penalty(h):
 
 def test_a_mismatching_plate_is_dumped_even_while_orders_are_open(h):
     h.start_round()
-    h.game.orders[:] = [Order(9, "bowl", ("patty:cooked", "rice:cooked"), 50, h.t, h.t + 40)]
+    h.game.orders[:] = [Order(9, "bowl", ("patty:cooked", "potato:cooked"), 50, h.t, h.t + 40)]
     make_sandwich_plate(h)  # tomato + bun: not the bowl
     h.place(DEL, PLATE)
     assert h.game.delivered == 0
@@ -417,22 +358,12 @@ def test_delivery_rejects_an_empty_plate_without_a_penalty(h):
     assert not h.item(PLATE).dirty
 
 
-def test_burnt_food_cannot_be_plated_but_can_be_trashed(h):
+def test_loose_food_at_the_delivery_station_is_trashed(h):
     h.start_round()
-    h.place(POT, RICE)
-    h.advance(21)
-    assert h.item(RICE).state == ItemState.BURNT
-    h.remove(POT, RICE)
-
-    h.clear()
-    h.place(PLT, RICE)
-    assert h.last(PLT, p.Reject) is not None
-
-    h.remove(PLT, RICE)
-    h.place(DEL, RICE)  # loose food on the delivery station = bin
-    assert h.item(RICE).state == ItemState.CONSUMED
+    h.place(DEL, TOMATO1)  # loose food on the delivery station = bin
+    assert h.item(TOMATO1).state == ItemState.CONSUMED
     h.advance(3.2)
-    assert h.item(RICE).state == ItemState.RAW
+    assert h.item(TOMATO1).state == ItemState.RAW
 
 
 def test_plate_capacity(h):

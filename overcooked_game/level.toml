@@ -23,7 +23,6 @@ wash_s = 5              # seconds of scrubbing at the sink to clean a dirty plat
 [stations]
 cutting_board = 1
 pan = 1
-pot = 1
 deep_fryer = 1
 plate = 2
 delivery = 1
@@ -32,7 +31,6 @@ sink = 1
 # Ingredients: how many tags to enrol, and which stations can process them.
 #   cutting_board = { goal = presses }               raw -> chopped
 #   pan           = { goal = steps, pattern = ".." } raw -> cooked (joystick pattern)
-#   pot           = { seconds = t, burn_after = t }  raw -> cooked, then burnt if left in
 #   deep_fryer    = { goal = N }                     raw -> cooked (hand-height tracking minigame)
 # Optional in any of them: from = "raw", to = "cooked" (states: raw, chopped, cooked).
 # An ingredient with no processing (bun) goes straight onto a plate.
@@ -47,10 +45,6 @@ cutting_board = { goal = 120 }
 [ingredient.patty]
 count = 2
 pan = { goal = 12, pattern = "circle" }
-
-[ingredient.rice]
-count = 2
-pot = { seconds = 10, burn_after = 8 }
 
 [ingredient.potato]
 count = 2
@@ -67,10 +61,6 @@ points = 100
 [recipe.burger]
 needs = ["patty:cooked", "bun:raw", "lettuce:chopped"]
 points = 150
-
-[recipe.rice_bowl]
-needs = ["rice:cooked", "tomato:chopped"]
-points = 120
 
 [recipe.fries]
 needs = ["potato:cooked"]

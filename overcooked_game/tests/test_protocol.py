@@ -13,7 +13,7 @@ UID = bytes([0xDE, 0xAD, 0xBE, 0xEF])
 
 MESSAGES = [
     p.Hello(p.StationKind.PAN, 3),
-    p.Heartbeat(p.StationKind.POT),
+    p.Heartbeat(p.StationKind.PLATE),
     p.TagPlaced(UID),
     p.TagPlaced(bytes(range(1, 11))),
     p.TagRemoved(UID, 123),
@@ -22,7 +22,7 @@ MESSAGES = [
     p.Welcome(),
     p.Accept(UID, p.TaskKind.PRESSES, 200, 17, 1),
     p.Reject(UID),
-    p.SetDisplay(p.DisplayMode.COOKING, 200),
+    p.SetDisplay(p.DisplayMode.PLATE_DIRTY, 200),
 ]
 
 
@@ -96,7 +96,7 @@ def test_reliability_and_version_match_firmware(header):
 
 def test_format_tx():
     assert format_tx("aabbccddeeff", p.Welcome()) == "TX AABBCCDDEEFF 6 R 02"
-    assert format_tx(None, p.SetDisplay(p.DisplayMode.BURNT), reliable=True) == "TX * 9 R 0400"
+    assert format_tx(None, p.SetDisplay(p.DisplayMode.REJECT), reliable=True) == "TX * 9 R 0600"
     assert format_tx("AABBCCDDEEFF", p.SetDisplay(p.DisplayMode.IDLE)) == "TX AABBCCDDEEFF 9 U 0000"
 
 

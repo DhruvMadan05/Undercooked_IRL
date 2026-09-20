@@ -98,13 +98,12 @@ button.small { padding: 4px 10px; font-size: 13px; }
 
 .log { list-style: none; margin: 0; padding: 0; max-height: 280px; overflow-y: auto; font-size: 14px; display: flex; flex-direction: column-reverse; }
 .log li { padding: 3px 0; border-bottom: 1px solid var(--card-2); }
-.log .k-ok { color: var(--good); } .log .k-warn { color: var(--warn); } .log .k-error, .log .k-burn { color: var(--bad); }
+.log .k-ok { color: var(--good); } .log .k-warn { color: var(--warn); } .log .k-error { color: var(--bad); }
 .log .k-score { color: var(--accent); font-weight: 700; } .log .k-order { color: #7cc4ff; }
 
 .items { display: flex; flex-wrap: wrap; gap: 6px; }
 .item { background: var(--card-2); border-radius: 6px; padding: 2px 8px; font-size: 13px; }
 .item.consumed { opacity: .45; }
-.item.burnt { color: var(--bad); }
 
 .overlay {
   position: fixed; inset: 0; background: rgba(10, 12, 16, .82); display: grid; place-content: center;

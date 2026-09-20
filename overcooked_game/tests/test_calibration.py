@@ -1,4 +1,4 @@
-from conftest import BUN, CUT, DEL, FRY, MACS, MASTER, PAN, PATTY, PLATE, PLT, POT, POTATO, RICE, SNK, STRAY, TOMATO1, TOMATO2
+from conftest import BUN, CUT, DEL, FRY, MACS, MASTER, PAN, PATTY, PLATE, PLT, POTATO, SNK, STRAY, TOMATO1, TOMATO2
 
 from overcooked import protocol as p
 from overcooked.model import Phase
@@ -18,11 +18,11 @@ def test_full_sequence(h):
     assert h.last(CUT, p.SetDisplay).mode == p.DisplayMode.CALIBRATED  # green flash on the station
     assert g.phase == Phase.CAL_STATIONS
 
-    for mac in (PAN, POT, FRY, PLT, DEL, SNK):
+    for mac in (PAN, FRY, PLT, DEL, SNK):
         h.place(mac, MASTER)
     assert g.phase == Phase.CAL_FOOD  # all stations done: moves on by itself
 
-    for uid in (TOMATO1, TOMATO2, PATTY, RICE, BUN, POTATO):
+    for uid in (TOMATO1, TOMATO2, PATTY, BUN, POTATO):
         h.bridge_tag(uid)
     assert g.phase == Phase.CAL_FOOD  # the plate is still missing
     h.bridge_tag(PLATE)

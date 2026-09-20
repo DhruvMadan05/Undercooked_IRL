@@ -16,7 +16,6 @@ PATTERN_IDS = {"circle": 0, "zigzag": 1, "hold": 2, "shake": 3}
 DEFAULT_STATES = {
     "cutting_board": (ItemState.RAW, ItemState.CHOPPED),
     "pan": (ItemState.RAW, ItemState.COOKED),
-    "pot": (ItemState.RAW, ItemState.COOKED),
     "deep_fryer": (ItemState.RAW, ItemState.COOKED),
 }
 
@@ -33,8 +32,6 @@ class Process:
     to_state: ItemState
     goal: int = 0            # presses / pattern steps (task stations)
     pattern: str = "circle"  # pan only
-    seconds: float = 0.0     # pot only
-    burn_after: float = 0.0  # pot only: seconds after cooked until burnt
 
 
 @dataclass(frozen=True)
@@ -87,15 +84,11 @@ def _process(ingredient: str, station: str, raw: dict) -> Process:
         to_state=_state(raw.get("to", default_to.value), where),
         goal=int(raw.get("goal", 0)),
         pattern=str(raw.get("pattern", "circle")),
-        seconds=float(raw.get("seconds", 0)),
-        burn_after=float(raw.get("burn_after", 0)),
     )
     if station in ("cutting_board", "pan", "deep_fryer") and proc.goal <= 0:
         raise ConfigError(f"{where}: goal must be > 0")
     if station == "pan" and proc.pattern not in PATTERN_IDS:
         raise ConfigError(f"{where}: unknown pattern {proc.pattern!r} (known: {', '.join(PATTERN_IDS)})")
-    if station == "pot" and proc.seconds <= 0:
-        raise ConfigError(f"{where}: seconds must be > 0")
     return proc
 
 

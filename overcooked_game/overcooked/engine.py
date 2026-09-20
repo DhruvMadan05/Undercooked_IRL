@@ -71,7 +71,7 @@ class Game:
     def log(self, text: str, kind: str = "info") -> None:
         self._log_id += 1
         self._log.append({"id": self._log_id, "t": round(self.now(), 2), "kind": kind, "text": text})
-        log.log(logging.WARNING if kind in ("warn", "burn") else logging.INFO, text)
+        log.log(logging.WARNING if kind == "warn" else logging.INFO, text)
 
     def send(self, station: Station, msg: p.Message, reliable: bool | None = None) -> None:
         self._send(station.mac, msg, reliable)

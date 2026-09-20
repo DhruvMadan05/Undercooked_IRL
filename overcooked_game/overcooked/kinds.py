@@ -107,70 +107,6 @@ class TaskStation(Behavior):
         return {}
 
 
-class Pot(Behavior):
-    """Timed cooking: the server runs the clock. Cooked after `seconds`,
-    burnt `burn_after` seconds later. Time spent in the pot is kept on the
-    item (in ms), so taking food out and putting it back continues."""
-
-    kind = StationKind.POT
-    name = "pot"
-    WARN_FRACTION = 0.6  # of burn_after, then the LEDs blink
-
-    def _cfg(self, game, item) -> Process | None:
-        return game.level.ingredients[item.ingredient].processes.get("pot")
-
-    def on_placed(self, game, station, item):
-        if _process(game, item, "pot") is None:
-            game.reject(station, item, f"{item.label} ({item.state.value}) cannot go in the pot")
-            return
-        if item.progress_kind != "pot":
-            item.progress, item.progress_kind = 0, "pot"
-        game.accept(station, item)
-        game.log(f"{station.label}: {item.label} cooking")
-
-    def tick(self, game, station, dt):
-        item = game.items.get(station.accepted) if station.accepted else None
-        cfg = self._cfg(game, item) if item and not item.is_plate else None
-        if cfg is None or item.state in (ItemState.BURNT, ItemState.CONSUMED):
-            return
-        item.progress += int(dt * 1000)
-        elapsed = item.progress / 1000
-        if item.state == cfg.from_state and elapsed >= cfg.seconds:
-            item.state = cfg.to_state
-            game.flash(station, DisplayMode.SUCCESS)
-            game.log(f"{station.label}: {item.label} is {item.state.value}, take it out!", "ok")
-        elif item.state == cfg.to_state and elapsed >= cfg.seconds + cfg.burn_after:
-            item.state = ItemState.BURNT
-            game.log(f"{station.label}: {item.label} burnt!", "burn")
-
-    def display(self, game, station):
-        item = game.items.get(station.accepted) if station.accepted else None
-        cfg = self._cfg(game, item) if item and not item.is_plate else None
-        if cfg is None:
-            return DisplayMode.IDLE, 0
-        if item.state == ItemState.BURNT:
-            return DisplayMode.BURNT, 0
-        elapsed = item.progress / 1000
-        if item.state == cfg.to_state:
-            if cfg.burn_after and elapsed >= cfg.seconds + cfg.burn_after * self.WARN_FRACTION:
-                return DisplayMode.WARNING, 0
-            return DisplayMode.COOKING, 255
-        return DisplayMode.COOKING, int(255 * min(1.0, elapsed / cfg.seconds))
-
-    def describe(self, game, station):
-        item = game.items.get(station.accepted) if station.accepted else None
-        cfg = self._cfg(game, item) if item and not item.is_plate else None
-        if not cfg:
-            return {}
-        elapsed = item.progress / 1000
-        if item.state == ItemState.BURNT:
-            return {"progress": 1.0, "note": "burnt"}
-        if item.state == cfg.to_state:
-            left = max(0.0, cfg.seconds + cfg.burn_after - elapsed)
-            return {"progress": 1.0, "note": f"burns in {left:.0f}s"}
-        return {"progress": min(1.0, elapsed / cfg.seconds)}
-
-
 class PlateStation(Behavior):
     """A plate reader IS a plate: any food put on it goes onto that plate, at any
     time. The plate's own tag is touched to the delivery station to serve it."""
@@ -189,8 +125,6 @@ class PlateStation(Behavior):
             game.reject(station, item, "the plate is dirty, it needs washing")
         elif len(plate.contents) >= game.level.plate_capacity:
             game.reject(station, item, "plate is full")
-        elif item.state == ItemState.BURNT:
-            game.reject(station, item, f"{item.label} is burnt")
         else:
             plate.contents.append(PlateEntry(item.uid, item.ingredient, item.state))
             item.state = ItemState.CONSUMED
@@ -218,7 +152,7 @@ class Delivery(Behavior):
     handed in. A plate that matches an open order scores it; any other plate is
     dumped for a small penalty. Either way the food comes back as RAW after
     respawn_s and the plate is dirty. Any loose food placed here is thrown away
-    the same way, which is how burnt food is recycled."""
+    the same way, which is how unwanted food is recycled."""
 
     kind = StationKind.DELIVERY
     name = "delivery"
@@ -299,7 +233,6 @@ class Sink(Behavior):
 BEHAVIORS: dict[StationKind, Behavior] = {
     StationKind.CUTTING_BOARD: TaskStation(StationKind.CUTTING_BOARD, "cutting_board", TaskKind.PRESSES),
     StationKind.PAN: TaskStation(StationKind.PAN, "pan", TaskKind.JOYSTICK_PATTERN),
-    StationKind.POT: Pot(),
     StationKind.PLATE: PlateStation(),
     StationKind.DELIVERY: Delivery(),
     StationKind.FRYER: TaskStation(StationKind.FRYER, "deep_fryer", TaskKind.FRY),

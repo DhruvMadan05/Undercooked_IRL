@@ -26,7 +26,7 @@ what they are told, the bridge is a dumb relay. Reset = one function call.
 | `overcooked_pan/` | Station: `JoystickPatternTask` (analog X/Y GPIO34/35), pure `PatternTracker` (circle / zigzag), native tests |
 | `deep_fryer_station/` | Station: `FryTask` (HC-SR04 hand height GPIO4/35, SSD1306 OLED I2C GPIO21/22), pure `fryer::ProgressTracker`/`overlaps()` (target overlap + fill/drain scoring), native tests |
 | `sink_station/` | Station: `ScrubTask` (analog joystick GPIO34/35, same pins as the pan), pure `scrub::ScrubTracker` (counts milliseconds of active circling), native tests |
-| `overcooked_reader_station/` | Pot / plate / delivery: same firmware, env picks the `StationKind` (`-e pot|plate|delivery`, one at a time) |
+| `overcooked_reader_station/` | Plate / delivery: same firmware, env picks the `StationKind` (`-e plate|delivery`, one at a time) |
 | `overcooked_server/` | **The bridge** (name is historical): ESP-NOW <-> USB serial + its own RC522 for calibration |
 | `overcooked_game/` | Python game server (`overcooked/` package), `level.toml`, browser UI in `overcooked/static/`, pytest suite |
 | `Overcooked_test/` | Early scratch project from before this work. Ignore it. |
@@ -52,9 +52,9 @@ what they are told, the bridge is a dumb relay. Reset = one function call.
 ## Game model (Python, `overcooked_game/overcooked/`)
 - `engine.py` `Game`: pure logic. Fed events (`handle`), a clock (`tick`, injectable `now`) and UI actions
   (`action("start_game")` etc.); sends via an injected callable. No serial/network/wall clock inside it, so tests run on a fake clock.
-- `kinds.py`: one `Behavior` per station kind (`TaskStation` for cutting board + pan, `Pot`, `PlateStation`, `Delivery`).
+- `kinds.py`: one `Behavior` per station kind (`TaskStation` for cutting board + pan + deep fryer, `Sink`, `PlateStation`, `Delivery`).
   Rules in code, numbers/menu in `level.toml` (parsed and validated by `config.py`).
-- `model.py`: `Item` (one physical tag: ingredient or plate; state raw/chopped/cooked/burnt/consumed; progress;
+- `model.py`: `Item` (one physical tag: ingredient or plate; state raw/chopped/cooked/consumed; progress;
   plate `contents` and `home_mac`), `Station`, `Order`, `Phase`.
 - Phases: `cal_master -> cal_stations -> cal_food -> ready -> countdown -> playing -> ended`.
 - **Calibration**: touch any tag to the *bridge's* reader (becomes the calibration tag) -> touch it to each station
@@ -84,9 +84,9 @@ what they are told, the bridge is a dumb relay. Reset = one function call.
   green) or `PlateDirty` (dull brown), from `PlateStation.display`. Colours are in `shared/StationCore/src/Display.cpp`.
   These two modes (9, 10) are new; wire layout unchanged, so `kProtocolVersion` stays 2 and older firmware just draws
   nothing for them. Reflash the plate reader(s) (`-e plate`) to get them.
-- Pot is timed on the server (cook after `seconds`, burnt `burn_after` later, LED warning at 60%).
-  Delivered/thrown-away food respawns as RAW after `respawn_s`; loose food on the delivery station is trashed
-  (the way to recycle burnt food). Orders spawn from recipes, expire with a penalty, deliveries score with a time bonus.
+- The pot station was removed (station kind 2 and display modes 2-4 are retired but their wire ids are left
+  unused, so the other stations keep their ids and need no reflash). Delivered/thrown-away food respawns as RAW after `respawn_s`; loose food on the delivery station is trashed
+  (the bin). Orders spawn from recipes, expire with a penalty, deliveries score with a time bonus.
 - `sim.py`: `SimBridge` speaks the real bridge line protocol with virtual stations that mimic the firmware, so the
   whole stack (link codec, Game, UI) runs with no hardware: `python -m overcooked --sim`.
 - `web.py`: FastAPI, websocket `/ws` pushes the full state at 10 Hz and takes `{"action": ...}` (`sim_*` actions go to the simulator).
@@ -95,7 +95,7 @@ what they are told, the bridge is a dumb relay. Reset = one function call.
 ## Build, test, run
 ```sh
 # Python (venv already at overcooked_game/.venv)
-cd overcooked_game && .venv/bin/python -m pytest -q          # 119 tests, ~0.5 s
+cd overcooked_game && .venv/bin/python -m pytest -q          # 115 tests, ~0.5 s
 .venv/bin/python -m overcooked --sim                          # http://127.0.0.1:8000
 .venv/bin/python -m overcooked --list-ports
 .venv/bin/python -m overcooked --port /dev/cu.usbserial-XXXX  # real bridge
@@ -107,10 +107,10 @@ cd overcooked_pan           && $PIO run && $PIO test -e native   # 8 tests
 cd deep_fryer_station       && $PIO run && $PIO test -e native   # 8 tests
 cd sink_station             && $PIO run && $PIO test -e native   # 8 tests
 cd overcooked_server        && $PIO run
-cd overcooked_reader_station && $PIO run -e pot                  # one env at a time; -t upload to flash
+cd overcooked_reader_station && $PIO run -e delivery             # one env at a time; -t upload to flash
 ```
 Every firmware project sets `default_envs` so a bare `pio run` works; in `overcooked_reader_station` a bare
-`pio run -t upload` would flash all three kinds in a row, so always pass `-e`.
+`pio run -t upload` would flash both kinds in a row, so always pass `-e`.
 
 ## Gotchas
 - **Do not let PlatformIO move to Arduino-ESP32 core 3.x.** `platform = espressif32` is unpinned; installed is platform 7.0.1 /
@@ -136,19 +136,19 @@ Every firmware project sets `default_envs` so a bare `pio run` works; in `overco
 
 ## Verified vs not verified
 - Verified in this environment: everything compiles for all firmware targets (including the new
-  `deep_fryer_station`); pytest (119 tests) and the cutting board / pan / deep fryer / sink native test suites pass
+  `deep_fryer_station`); pytest (115 tests) and the cutting board / pan / deep fryer / sink native test suites pass
   (native needs `-std=gnu++17`, see Gotchas); a full simulated round (calibrate, cut with resume across boards,
-  pan, pot cook/burn, plate, delivery) runs through the real line protocol and browser UI (screenshotted in
+  pan, plate, delivery) runs through the real line protocol and browser UI (screenshotted in
   headless Chrome); the serial transport works over a pty. The deep fryer's server-side behaviour (accept,
   progress resume on pickup, reject wrong food, `on_done` -> cooked) is unit tested the same way as the pan.
 - Not verified by the author of this file: anything on real hardware. The user has since run real boards (the saved
   `calibration.json` has real MACs), but no results were reported back. Specifically untested: RC522 removal detection
   tuning, ESP-NOW range with several stations, LED behaviour, joystick feel (`JOY_DEAD_ZONE`, `INVERT_X/Y`),
-  the bridge over a real USB port, pan/pot/plate/delivery firmware end to end, the sink's joystick scrubbing feel (`kDeadzoneRadius` / `kMinDeltaAngle` in `ScrubTracker.h`, `wash_s`), and the entire deep fryer minigame
+  the bridge over a real USB port, pan/plate/delivery firmware end to end, the sink's joystick scrubbing feel (`kDeadzoneRadius` / `kMinDeltaAngle` in `ScrubTracker.h`, `wash_s`), and the entire deep fryer minigame
   (HC-SR04 reading, target motion feel, OLED wiring/address) - it only ran as a hand-tested standalone sketch
   before being integrated into StationCore here.
 - The joystick pins (GPIO34/35), the deep fryer's HC-SR04/OLED pins (GPIO4/35/21/22) and hand-height range
-  (`NEAR_CM`/`FAR_CM`/`CATCH_ZONE_FRAC`), and the menu in `level.toml` (tomato, patty, rice, potato, ...
+  (`NEAR_CM`/`FAR_CM`/`CATCH_ZONE_FRAC`), and the menu in `level.toml` (tomato, patty, potato, ...
   recipes, points) are placeholders/guesses, easy to change.
 
 ## Sensible next steps
