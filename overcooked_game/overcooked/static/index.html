@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Overcooked</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header>
+    <h1>Overcooked</h1>
+    <span id="phase" class="chip"></span>
+    <span class="spacer"></span>
+    <span id="bridge" class="chip"></span>
+    <button id="mute" class="ghost" title="Sound on/off">Sound on</button>
+  </header>
+
+  <div id="banner" class="banner" hidden></div>
+  <div id="overlay" class="overlay" hidden></div>
+
+  <main>
+    <section id="hud" class="hud"></section>
+    <section id="calibration" class="card" hidden></section>
+    <section id="orders-section" hidden>
+      <h2>Orders</h2>
+      <div id="orders" class="orders"></div>
+    </section>
+    <section>
+      <h2>Stations</h2>
+      <div id="stations" class="stations"></div>
+    </section>
+    <section id="controls" class="controls"></section>
+    <div class="two">
+      <section class="card">
+        <h2>Log</h2>
+        <ul id="log" class="log"></ul>
+      </section>
+      <section class="card">
+        <h2>Tags</h2>
+        <div id="items" class="items"></div>
+      </section>
+    </div>
+    <section id="sim" class="card sim" hidden></section>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

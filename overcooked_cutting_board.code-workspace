@@ -1,0 +1,20 @@
+{
+	"folders": [
+		{
+			"path": "overcooked_cutting_board"
+		},
+		{
+			"name": "overcooked_server",
+			"path": "overcooked_server"
+		},
+		{
+			"name": "overcooked_game",
+			"path": "overcooked_game"
+		},
+		{
+			"name": "shared",
+			"path": "shared"
+		}
+	],
+	"settings": {}
+}
