@@ -85,6 +85,8 @@ enum class TaskKind : uint8_t {
 enum class Pattern : uint8_t {
   Circle = 0, // sweep the stick round the edge, either way
   Zigzag = 1, // swing it left and right
+  Hold = 2,   // keep it centered, unmoving
+  Shake = 3,  // swing it rapidly, either axis
 };
 
 // What the LEDs show when no task is drawing its own progress.
