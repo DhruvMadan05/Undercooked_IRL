@@ -73,6 +73,7 @@ enum class StationKind : uint8_t {
   Plate = 3,
   Delivery = 4,
   Fryer = 5,
+  Sink = 6,
 };
 
 // What the station's own hardware has to do while a tag is on it.
@@ -81,6 +82,7 @@ enum class TaskKind : uint8_t {
   Presses = 1,         // count button presses
   JoystickPattern = 2, // move the joystick in a pattern
   Fry = 3,             // keep a hand's height aligned with a roaming target
+  Scrub = 4,           // circle a joystick; goal and progress are milliseconds of active scrubbing
 };
 
 // Accept.param for TaskKind::JoystickPattern: the stick movement to perform.

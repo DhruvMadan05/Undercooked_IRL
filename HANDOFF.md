@@ -25,6 +25,7 @@ what they are told, the bridge is a dumb relay. Reset = one function call.
 | `overcooked_cutting_board/` | Station: `PressTask` counts limit-switch presses (GPIO14). Also has the `native` unit-test env |
 | `overcooked_pan/` | Station: `JoystickPatternTask` (analog X/Y GPIO34/35), pure `PatternTracker` (circle / zigzag), native tests |
 | `deep_fryer_station/` | Station: `FryTask` (HC-SR04 hand height GPIO4/35, SSD1306 OLED I2C GPIO21/22), pure `fryer::ProgressTracker`/`overlaps()` (target overlap + fill/drain scoring), native tests |
+| `sink_station/` | Station: `ScrubTask` (analog joystick GPIO34/35, same pins as the pan), pure `scrub::ScrubTracker` (counts milliseconds of active circling), native tests |
 | `overcooked_reader_station/` | Pot / plate / delivery: same firmware, env picks the `StationKind` (`-e pot|plate|delivery`, one at a time) |
 | `overcooked_server/` | **The bridge** (name is historical): ESP-NOW <-> USB serial + its own RC522 for calibration |
 | `overcooked_game/` | Python game server (`overcooked/` package), `level.toml`, browser UI in `overcooked/static/`, pytest suite |
@@ -73,8 +74,11 @@ what they are told, the bridge is a dumb relay. Reset = one function call.
 - **Dump + dirty plates**: at delivery a plate with no matching order is dumped (`Game.dump_plate`, `dump_penalty`
   points, floored at 0); a matching one is delivered. Both go through `Game._use_up_plate`: food respawns raw after
   `respawn_s`, `Item.dirty = True`. A dirty plate is rejected by its plate reader and by delivery (no penalty), and
-  the plate tile shows "dirty, needs washing". `Item.reset()` (new round / Reset) clears it. **There is no sink yet, so
-  today a plate is single-use per round**: the sink should just set `dirty = False` on the plate it washes.
+  the plate tile shows "dirty, needs washing". `Item.reset()` (new round / Reset) clears it. Dirty plates are washed at the
+  **sink** (`kinds.Sink`, `StationKind::Sink`, `TaskKind::Scrub`): touch the plate's tag there, scrub the joystick, and
+  after `wash_s` seconds (`level.toml`, max 60) `dirty` goes back to False and the plate reader's LEDs go green. Goal and
+  progress are milliseconds of active scrubbing, kept on the plate (`progress_kind = "sink"`) so a half-washed plate resumes.
+  The sink refuses clean plates, food and unknown tags. Without a sink in `[stations]` a plate is single-use per round.
   The plate reader flashes SUCCESS (green x5) / REJECT (red x3) via `game.flash`, and the delivery station flashes the
   same result. Between flashes a plate reader shows its plate's state during a round: `DisplayMode.PlateClean` (solid
   green) or `PlateDirty` (dull brown), from `PlateStation.display`. Colours are in `shared/StationCore/src/Display.cpp`.
@@ -91,7 +95,7 @@ what they are told, the bridge is a dumb relay. Reset = one function call.
 ## Build, test, run
 ```sh
 # Python (venv already at overcooked_game/.venv)
-cd overcooked_game && .venv/bin/python -m pytest -q          # 102 tests, ~0.5 s
+cd overcooked_game && .venv/bin/python -m pytest -q          # 119 tests, ~0.5 s
 .venv/bin/python -m overcooked --sim                          # http://127.0.0.1:8000
 .venv/bin/python -m overcooked --list-ports
 .venv/bin/python -m overcooked --port /dev/cu.usbserial-XXXX  # real bridge
@@ -101,6 +105,7 @@ PIO=~/.platformio/penv/bin/pio
 cd overcooked_cutting_board && $PIO run && $PIO test -e native   # 6 tests
 cd overcooked_pan           && $PIO run && $PIO test -e native   # 8 tests
 cd deep_fryer_station       && $PIO run && $PIO test -e native   # 8 tests
+cd sink_station             && $PIO run && $PIO test -e native   # 8 tests
 cd overcooked_server        && $PIO run
 cd overcooked_reader_station && $PIO run -e pot                  # one env at a time; -t upload to flash
 ```
@@ -131,7 +136,7 @@ Every firmware project sets `default_envs` so a bare `pio run` works; in `overco
 
 ## Verified vs not verified
 - Verified in this environment: everything compiles for all firmware targets (including the new
-  `deep_fryer_station`); pytest (105 tests) and the cutting board / pan / deep fryer native test suites pass
+  `deep_fryer_station`); pytest (119 tests) and the cutting board / pan / deep fryer / sink native test suites pass
   (native needs `-std=gnu++17`, see Gotchas); a full simulated round (calibrate, cut with resume across boards,
   pan, pot cook/burn, plate, delivery) runs through the real line protocol and browser UI (screenshotted in
   headless Chrome); the serial transport works over a pty. The deep fryer's server-side behaviour (accept,
@@ -139,7 +144,7 @@ Every firmware project sets `default_envs` so a bare `pio run` works; in `overco
 - Not verified by the author of this file: anything on real hardware. The user has since run real boards (the saved
   `calibration.json` has real MACs), but no results were reported back. Specifically untested: RC522 removal detection
   tuning, ESP-NOW range with several stations, LED behaviour, joystick feel (`JOY_DEAD_ZONE`, `INVERT_X/Y`),
-  the bridge over a real USB port, pan/pot/plate/delivery firmware end to end, and the entire deep fryer minigame
+  the bridge over a real USB port, pan/pot/plate/delivery firmware end to end, the sink's joystick scrubbing feel (`kDeadzoneRadius` / `kMinDeltaAngle` in `ScrubTracker.h`, `wash_s`), and the entire deep fryer minigame
   (HC-SR04 reading, target motion feel, OLED wiring/address) - it only ran as a hand-tested standalone sketch
   before being integrated into StationCore here.
 - The joystick pins (GPIO34/35), the deep fryer's HC-SR04/OLED pins (GPIO4/35/21/22) and hand-height range

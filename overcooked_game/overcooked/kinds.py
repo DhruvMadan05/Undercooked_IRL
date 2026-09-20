@@ -249,6 +249,53 @@ class Delivery(Behavior):
             game.flash(reader, result)
 
 
+class Sink(Behavior):
+    """Wash a dirty plate: touch its tag here and scrub until the station reports
+    wash_s seconds of scrubbing (progress is in milliseconds, kept on the plate so
+    it can be picked up and put back). A clean plate is the plate reader's again:
+    its LEDs go back to green."""
+
+    kind = StationKind.SINK
+    name = "sink"
+
+    def _goal(self, game) -> int:
+        return round(game.level.wash_s * 1000)
+
+    def on_placed(self, game, station, item):
+        if not item.is_plate:
+            game.reject(station, item, f"{item.label} is not a plate, only plates are washed here")
+        elif not item.dirty:
+            game.reject(station, item, "the plate is clean")
+        else:
+            progress = item.progress if item.progress_kind == self.name else 0
+            game.accept(station, item, task=TaskKind.SCRUB, goal=self._goal(game), progress=progress)
+            game.log(f"{station.label}: washing, {progress / 1000:.1f}/{game.level.wash_s:g} s")
+
+    def _washing(self, item) -> bool:
+        return item.is_plate and item.dirty
+
+    def on_progress(self, game, station, item, value):
+        if self._washing(item):
+            item.progress, item.progress_kind = min(value, self._goal(game)), self.name
+
+    def on_removed(self, game, station, item, progress):
+        if self._washing(item):
+            item.progress, item.progress_kind = min(progress, self._goal(game)), self.name
+            game.log(f"{station.label}: plate picked up at {item.progress / 1000:.1f}/{game.level.wash_s:g} s")
+
+    def on_done(self, game, station, item):
+        if self._washing(item):
+            item.dirty = False
+            item.progress, item.progress_kind = 0, None
+            game.log(f"{station.label}: plate is clean", "ok")
+
+    def describe(self, game, station):
+        item = game.items.get(station.accepted) if station.accepted else None
+        if item and self._washing(item):
+            return {"progress": min(1.0, item.progress / self._goal(game))}
+        return {}
+
+
 BEHAVIORS: dict[StationKind, Behavior] = {
     StationKind.CUTTING_BOARD: TaskStation(StationKind.CUTTING_BOARD, "cutting_board", TaskKind.PRESSES),
     StationKind.PAN: TaskStation(StationKind.PAN, "pan", TaskKind.JOYSTICK_PATTERN),
@@ -256,4 +303,5 @@ BEHAVIORS: dict[StationKind, Behavior] = {
     StationKind.PLATE: PlateStation(),
     StationKind.DELIVERY: Delivery(),
     StationKind.FRYER: TaskStation(StationKind.FRYER, "deep_fryer", TaskKind.FRY),
+    StationKind.SINK: Sink(),
 }

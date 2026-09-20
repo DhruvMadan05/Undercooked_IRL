@@ -33,6 +33,7 @@ pot = 1
 deep_fryer = 1
 plate = 1
 delivery = 1
+sink = 1
 
 [ingredient.tomato]
 count = 2
@@ -79,8 +80,9 @@ MACS = {
     p.StationKind.PLATE: "020000000301",
     p.StationKind.DELIVERY: "020000000401",
     p.StationKind.FRYER: "020000000501",
+    p.StationKind.SINK: "020000000601",
 }
-CUT, PAN, POT, PLT, DEL, FRY = (MACS[k] for k in p.StationKind)
+CUT, PAN, POT, PLT, DEL, FRY, SNK = (MACS[k] for k in p.StationKind)
 
 
 @pytest.fixture

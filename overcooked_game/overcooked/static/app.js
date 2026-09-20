@@ -1,6 +1,6 @@
 "use strict";
 
-const ICONS = { cutting_board: "🔪", pan: "🍳", pot: "🍲", deep_fryer: "🍟", plate: "🍽️", delivery: "🛎️" };
+const ICONS = { cutting_board: "🔪", pan: "🍳", pot: "🍲", deep_fryer: "🍟", plate: "🍽️", delivery: "🛎️", sink: "🧼" };
 const PHASE_LABEL = {
   cal_master: "Calibration 1/3", cal_stations: "Calibration 2/3", cal_food: "Calibration 3/3",
   ready: "Ready", countdown: "Get ready", playing: "Playing", ended: "Round over",

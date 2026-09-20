@@ -1,0 +1,13 @@
+# macOS
+.DS_Store
+
+# PlatformIO build output, downloaded libraries and the editor files it generates
+.pio/
+.vscode/
+
+# Python (overcooked_game)
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/

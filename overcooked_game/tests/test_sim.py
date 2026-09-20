@@ -55,7 +55,7 @@ async def rig(level, tmp_path):
 async def test_stations_handshake(rig):
     await rig.run(2)
     assert rig.game.bridge_mac == "020000000001"
-    assert len(rig.game.stations) == 6
+    assert len(rig.game.stations) == 7
     assert all(s.online for s in rig.game.stations.values())
     assert all(s.connected for s in rig.sim.stations.values())
 
@@ -111,7 +111,7 @@ async def test_station_that_loses_the_server_reconnects(rig):
 async def test_sim_snapshot_and_actions(rig):
     await rig.run(1)
     snap = rig.sim.snapshot()
-    assert {s["kind"] for s in snap["stations"]} == {"cutting_board", "pan", "pot", "deep_fryer", "plate", "delivery"}
+    assert {s["kind"] for s in snap["stations"]} == {"cutting_board", "pan", "pot", "deep_fryer", "plate", "delivery", "sink"}
     assert rig.sim.action("tap", tag="calibration") is None
     assert rig.sim.action("tap", tag="nope") == "unknown tag"
     assert rig.sim.action("place", mac="nope", tag="stray") == "unknown station"

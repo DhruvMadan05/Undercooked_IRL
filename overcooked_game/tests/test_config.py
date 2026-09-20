@@ -21,6 +21,14 @@ def test_pot_states_can_be_overridden():
     assert (proc.from_state, proc.to_state) == (ItemState.CHOPPED, ItemState.COOKED)
 
 
+def test_wash_time_defaults_and_is_limited():
+    assert parse_level({}).wash_s == 5
+    assert parse_level({"level": {"wash_s": 2.5}}).wash_s == 2.5
+    for bad in (0, -1, 61):
+        with pytest.raises(ConfigError, match="wash_s"):
+            parse_level({"level": {"wash_s": bad}})
+
+
 @pytest.mark.parametrize("data,text", [
     ({"stations": {"blender": 1}}, "unknown station"),
     ({"ingredient": {"x": {"cutting_board": {}}}}, "goal must be"),

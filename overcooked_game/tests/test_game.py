@@ -1,6 +1,6 @@
 import pytest
 
-from conftest import BUN, CUT, DEL, FRY, MASTER, PAN, PATTY, PLATE, PLT, POT, POTATO, RICE, STRAY, TOMATO1, TOMATO2
+from conftest import BUN, CUT, DEL, FRY, MASTER, PAN, PATTY, PLATE, PLT, POT, POTATO, RICE, SNK, STRAY, TOMATO1, TOMATO2
 
 from overcooked import protocol as p
 from overcooked.model import ItemState, Order, Phase
@@ -529,3 +529,94 @@ def test_snapshot_is_json_ready(h):
     json.dumps(snap)
     tile = next(s for s in snap["stations"] if s["mac"] == CUT)
     assert tile["item"] == "tomato" and tile["online"] and tile["name"] == "Cutting board 1"
+
+
+# ---- sink ---------------------------------------------------------------------------------------
+
+def dirty_plate(h):
+    """A round in which the plate has been used (dumped), so it is dirty."""
+    h.start_round()
+    h.game.orders.clear()
+    make_sandwich_plate(h)
+    h.place(DEL, PLATE)
+    h.remove(DEL, PLATE)
+    h.advance(3.2)
+    assert h.item(PLATE).dirty
+
+
+def test_sink_washes_a_dirty_plate(h):
+    dirty_plate(h)
+    h.clear()
+    h.place(SNK, PLATE)
+    accept = h.last(SNK, p.Accept)
+    assert (accept.task, accept.goal, accept.progress) == (p.TaskKind.SCRUB, 5000, 0)  # wash_s default: 5 s in ms
+
+    h.progress(SNK, PLATE, 2000)
+    assert h.item(PLATE).dirty
+    h.progress(SNK, PLATE, 5000)
+    h.done(SNK, PLATE)
+    assert not h.item(PLATE).dirty
+    assert h.item(PLATE).progress == 0
+
+    h.advance(0.2)
+    assert h.last(PLT, p.SetDisplay).mode == p.DisplayMode.PLATE_CLEAN  # the plate reader is green again
+    h.clear()
+    h.place(PLT, BUN)  # and takes food again
+    assert h.last(PLT, p.Accept) is not None
+
+
+def test_a_half_washed_plate_resumes(h):
+    dirty_plate(h)
+    h.place(SNK, PLATE)
+    h.progress(SNK, PLATE, 3200)
+    h.remove(SNK, PLATE, progress=3200)
+    assert h.item(PLATE).dirty and h.item(PLATE).progress == 3200
+
+    h.clear()
+    h.place(SNK, PLATE)
+    assert h.last(SNK, p.Accept).progress == 3200
+
+
+def test_sink_shows_wash_progress(h):
+    dirty_plate(h)
+    h.place(SNK, PLATE)
+    h.progress(SNK, PLATE, 2500)
+    tile = next(s for s in h.game.snapshot()["stations"] if s["mac"] == SNK)
+    assert tile["progress"] == 0.5
+
+
+def test_sink_only_takes_dirty_plates(h):
+    h.start_round()
+    for uid, why in ((PLATE, "clean plate"), (TOMATO1, "food"), (STRAY, "unknown tag")):
+        h.clear()
+        h.place(SNK, uid)
+        assert h.last(SNK, p.Reject) is not None, why
+        assert h.last(SNK, p.Accept) is None, why
+        h.remove(SNK, uid)
+
+
+def test_a_wash_cannot_finish_outside_a_round(h):
+    dirty_plate(h)
+    h.place(SNK, PLATE)
+    h.game.action("end_game")
+    h.done(SNK, PLATE)
+    assert h.item(PLATE).dirty
+
+
+def test_a_plate_can_be_reused_after_washing(h):
+    h.start_round()
+    h.game.orders[:] = [Order(1, "sandwich", ("bun:raw", "tomato:chopped"), 100, h.t, h.t + 40)]
+    make_sandwich_plate(h)
+    h.place(DEL, PLATE)
+    h.remove(DEL, PLATE)
+    assert h.game.delivered == 1 and h.item(PLATE).dirty
+    h.advance(3.2)
+
+    h.place(SNK, PLATE)
+    h.done(SNK, PLATE)
+    h.remove(SNK, PLATE)
+
+    h.game.orders[:] = [Order(2, "sandwich", ("bun:raw", "tomato:chopped"), 100, h.t, h.t + 40)]
+    make_sandwich_plate(h)
+    h.place(DEL, PLATE)
+    assert h.game.delivered == 2

@@ -13,6 +13,7 @@ dump_penalty = 5        # points lost when a plate that matches no order is dump
 time_bonus = 20         # extra points for a fast delivery (scaled by time left)
 respawn_s = 3           # delivered (or trashed) food tags come back as RAW after this
 plate_capacity = 4      # ingredients that fit on one plate
+wash_s = 5              # seconds of scrubbing at the sink to clean a dirty plate
 
 # How many of each station the level needs. The calibration wizard asks you to
 # touch the calibration tag to each of them.
@@ -26,6 +27,7 @@ pot = 1
 deep_fryer = 1
 plate = 2
 delivery = 1
+sink = 1
 
 # Ingredients: how many tags to enrol, and which stations can process them.
 #   cutting_board = { goal = presses }               raw -> chopped

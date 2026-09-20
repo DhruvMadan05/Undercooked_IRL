@@ -13,6 +13,7 @@ laptop runs the game and shows the scoreboard.
 | `overcooked_cutting_board/` | Cutting board station firmware (counts limit-switch presses) |
 | `overcooked_pan/` | Frying pan station firmware (joystick moved in a circle / zigzag pattern) |
 | `deep_fryer_station/` | Deep fryer station firmware (keep a hand's height, read by an HC-SR04, aligned with a roaming target shown on an OLED) |
+| `sink_station/` | Sink station firmware: washes a dirty plate when a joystick is scrubbed in circles |
 | `overcooked_reader_station/` | Pot, plate and delivery stations: reader + LEDs only, one project with an environment per kind. A plate station is the plate itself (food goes on it); each plate also has a tag, touched to the delivery station to serve |
 | `overcooked_server/` | Bridge firmware: ESP-NOW <-> USB serial, plus its own RC522 for calibration |
 | `shared/OvercookedComm/` | ESP-NOW protocol (typed messages, acks, retries) |
@@ -49,7 +50,8 @@ Every station and the bridge use the same RC522 and LED strip wiring, documented
 Extra inputs: cutting board limit switch on GPIO14 (`overcooked_cutting_board/src/main.cpp`), pan joystick
 X→GPIO34, Y→GPIO35, powered from 3V3 (`overcooked_pan/src/main.cpp`), deep fryer HC-SR04 (TRIG→GPIO4,
 ECHO→GPIO35 through a 5V→3.3V divider) and SSD1306 OLED (SDA→GPIO21, SCL→GPIO22)
-(`deep_fryer_station/src/main.cpp`; these pins are my first guess, change them to match your build).
+(`deep_fryer_station/src/main.cpp`; these pins are my first guess, change them to match your build), sink
+joystick X→GPIO34, Y→GPIO35, powered from 3V3 (`sink_station/src/main.cpp`).
 
 ## Calibration (start of every game, or "Load last calibration")
 
@@ -75,8 +77,8 @@ a plate reader *is* a plate: put food on it whenever and it goes onto that plate
 plate's own tag to the delivery station serves what is on it. If it matches an open order that
 scores; if not, the plate is dumped for a small penalty (`dump_penalty`). Either way the plate reader
 flashes green (served) or red (dumped) and then glows dull brown while the plate is dirty (solid green when clean), the food comes back as raw after a few seconds, and the plate is
-*dirty*: it takes no food and cannot be served until it is washed (a sink is planned; a new round or
-Reset cleans every plate); loose food put on the delivery station is thrown away
+*dirty*: it takes no food and cannot be served until it is washed (wash it at the sink: touch the plate's tag there and scrub the joystick in circles for `wash_s`
+seconds, and the plate reader goes green again; a new round or Reset also cleans every plate); loose food put on the delivery station is thrown away
 (the way to recycle burnt food).
 
 ## Bridge serial protocol
@@ -114,6 +116,7 @@ cd overcooked_game && .venv/bin/pytest                  # protocol, calibration,
 cd overcooked_cutting_board && pio test -e native       # tag presence logic
 cd overcooked_pan && pio test -e native                 # joystick pattern logic
 cd deep_fryer_station && pio test -e native              # hand/target overlap + progress scoring
+cd sink_station && pio test -e native                    # scrubbing logic
 pio run                                                 # in each firmware folder
 ```
 

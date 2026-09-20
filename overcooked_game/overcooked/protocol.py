@@ -36,6 +36,7 @@ class StationKind(IntEnum):
     PLATE = 3
     DELIVERY = 4
     FRYER = 5
+    SINK = 6
 
 
 class TaskKind(IntEnum):
@@ -43,6 +44,7 @@ class TaskKind(IntEnum):
     PRESSES = 1
     JOYSTICK_PATTERN = 2
     FRY = 3
+    SCRUB = 4
 
 
 class DisplayMode(IntEnum):
@@ -67,6 +69,7 @@ KIND_NAMES = {
     StationKind.PLATE: "plate",
     StationKind.DELIVERY: "delivery",
     StationKind.FRYER: "deep_fryer",
+    StationKind.SINK: "sink",
 }
 KIND_BY_NAME = {name: kind for kind, name in KIND_NAMES.items()}
 

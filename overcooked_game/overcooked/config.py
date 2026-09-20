@@ -61,6 +61,7 @@ class Level:
     order_time_s: float
     expire_penalty: int
     dump_penalty: int
+    wash_s: float
     time_bonus: int
     respawn_s: float
     plate_capacity: int
@@ -123,6 +124,10 @@ def parse_level(data: dict) -> Level:
             processes[station] = _process(name, station, params)
         ingredients[name] = Ingredient(name, count, processes)
 
+    wash_s = float(lv.get("wash_s", 5))
+    if not 0 < wash_s <= 60:  # goes to the station as milliseconds in 16 bits
+        raise ConfigError(f"level.wash_s: must be more than 0 and at most 60, got {wash_s}")
+
     order_time = float(lv.get("order_time_s", 90))
     recipes: dict[str, Recipe] = {}
     for name, raw in data.get("recipe", {}).items():
@@ -142,6 +147,7 @@ def parse_level(data: dict) -> Level:
         order_time_s=order_time,
         expire_penalty=int(lv.get("expire_penalty", 10)),
         dump_penalty=int(lv.get("dump_penalty", 5)),
+        wash_s=wash_s,
         time_bonus=int(lv.get("time_bonus", 20)),
         respawn_s=float(lv.get("respawn_s", 3)),
         plate_capacity=int(lv.get("plate_capacity", 4)),
