@@ -1,9 +1,12 @@
 #include <Arduino.h>
 #include <SPI.h>
+#include <Wire.h>
 #include <MFRC522.h>
 #include <WiFi.h>
 #include <esp_now.h>
 #include <Adafruit_NeoPixel.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
 #include <math.h>
 
 // Deep fryer station: mimics Stardew Valley's fishing minigame. Scan an
@@ -11,6 +14,10 @@
 // HC-SR04 aligned with a roaming target zone (the "fish") to fill the fry
 // progress meter before it drains to zero. On success the item's UID is
 // broadcast over ESP-NOW, same as the other stations.
+//
+// The OLED draws the target zone as a bar and the hand as a box on the same
+// near/far axis (left = near the sensor, right = far); the LED strip is
+// dedicated entirely to the fry progress bar.
 
 // RC522, same left-header wiring as the other stations:
 //   RC522 SDA  -> GPIO32  (SS/CS)
@@ -26,13 +33,30 @@
 #define MISO_PIN 26
 #define RST_PIN  27
 
-// WS2812B strip. Bigger than the other stations' 5 pixels: this strip has
-// to show two independently-moving markers (the target zone and the
-// player's hand position), which needs more resolution to read clearly.
+// WS2812B strip, used purely as the fry progress bar now that the OLED
+// carries the target-tracking readout.
 //   Strip DIN -> GPIO13   (via ~330 ohm series resistor)
 //   Strip 5V  -> 5V, Strip GND -> GND
 #define LED_PIN   13
 #define LED_COUNT 16
+
+// 0.91" SSD1306 OLED (128x32), I2C, "Ver 1.6" 4-pin module. Shows the
+// target zone's position and which direction the hand needs to move to
+// reach it.
+//   OLED GND -> GND
+//   OLED VCC -> 3V3     (these modules are 3.3V logic; check the silkscreen
+//                        before trying 5V even if it has an onboard regulator)
+//   OLED SCL -> GPIO22  (I2C clock, ESP32's default)
+//   OLED SDA -> GPIO21  (I2C data, ESP32's default)
+// Default I2C address for these boards is 0x3C. If the screen stays blank,
+// run an I2C scanner sketch first -- a few clones ship as 0x3D instead.
+#define OLED_SDA_PIN  21
+#define OLED_SCL_PIN  22
+#define OLED_WIDTH    128
+#define OLED_HEIGHT   32
+#define OLED_RESET    -1     // no dedicated reset pin on this module
+#define OLED_ADDRESS  0x3C
+#define OLED_UPDATE_INTERVAL_MS 150 // I2C full-frame pushes are slower than the LED strip; throttle separately
 
 // HC-SR04 ultrasonic, reads the height of the player's hand/basket handle
 // above the fryer.
@@ -65,24 +89,37 @@
 
 // How much of the roaming range the catch zone covers, as a fraction of
 // the full range. Wider = easier, same idea as a bigger bar for an easier
-// fish in the original game.
-#define CATCH_ZONE_FRAC 0.20f
+// fish in the original game. Widened along with everything else below to
+// make the round very forgiving.
+#define CATCH_ZONE_FRAC 0.30f
 
 // Target ("fish") motion tuning -- mostly drifts, occasionally darts.
-#define TARGET_DRIFT_ACCEL 0.6f      // fraction/sec^2, pull toward a wandering velocity
-#define TARGET_MAX_SPEED   0.5f      // fraction/sec, normal drift speed
-#define TARGET_DART_CHANCE_PER_TICK 200 // out of 10000, checked once per FRYING tick
-#define TARGET_DART_SPEED   1.6f     // fraction/sec, during a dart
-#define TARGET_DART_MS       250     // how long a dart lasts
+// Slowed down (and darts made rarer/gentler) so the target doesn't demand
+// quick reactions to stay on top of.
+#define TARGET_DRIFT_ACCEL 0.4f      // fraction/sec^2, pull toward a wandering velocity
+#define TARGET_MAX_SPEED   0.3f      // fraction/sec, normal drift speed
+#define TARGET_DART_CHANCE_PER_TICK 100 // out of 10000, checked once per FRYING tick
+#define TARGET_DART_SPEED   1.0f     // fraction/sec, during a dart
+#define TARGET_DART_MS       200     // how long a dart lasts
 
-// Fry progress tuning.
-#define PROGRESS_FILL_PER_SEC  0.35f  // while hand overlaps the target
-#define PROGRESS_DRAIN_PER_SEC 0.25f  // while it doesn't
+// Fry progress tuning: 10 seconds of continuous overlap to go from empty
+// to fully fried, 60 seconds of continuous miss to go from full to burnt.
+#define PROGRESS_FILL_PER_SEC  (1.0f / 10.0f)
+#define PROGRESS_DRAIN_PER_SEC (1.0f / 60.0f)
+#define FRY_START_PROGRESS 0.5f  // start in the middle, like the bar it's modeled on -- starting at
+                                  // 0.0 gives zero buffer, so any miss on the very first tick is an
+                                  // instant fail before the player's hand is even in position
+#define FRY_GRACE_MS 750         // scoring is suspended for this long after a scan, so the ultrasonic
+                                  // gets a few pings to settle and the player has time to react
 
-#define SAMPLE_INTERVAL_MS 60 // matches the ultrasonic's own ping interval
+// Slower than before on purpose: this both eases the CPU/I2C/ultrasonic
+// workload and, since the dart chance above is rolled once per tick, makes
+// darts roll (and so happen) less often in real time too.
+#define SAMPLE_INTERVAL_MS 200
 
 MFRC522 rfid(SS_PIN, RST_PIN);
 Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
+Adafruit_SSD1306 display(OLED_WIDTH, OLED_HEIGHT, &Wire, OLED_RESET);
 
 uint8_t broadcastAddress[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
@@ -114,6 +151,16 @@ uint32_t dartEndsAtMs = 0;
 float fryProgress = 0.0f; // 0..1
 uint32_t lastSampleMs = 0;
 uint32_t lastPingMs = 0;
+uint32_t lastOledMs = 0;
+uint32_t fryStartMs = 0;
+
+// Maps a smoothed 0..1 position (handPos/targetPos) to a screen column.
+// Left = near the sensor (pos 1.0), right = far from it (pos 0.0), per the
+// physical near/far axis the ultrasonic measures.
+int posToScreenX(float pos) {
+  pos = constrain(pos, 0.0f, 1.0f);
+  return (int)roundf((1.0f - pos) * (OLED_WIDTH - 1));
+}
 
 // Fires one ping and returns distance in cm, or -1 if no echo came back
 // in time (out of range / nothing there).
@@ -172,36 +219,74 @@ void updateTarget(float dt) {
   if (targetPos > 1.0f) { targetPos = 2.0f - targetPos; targetVel = -targetVel; }
 }
 
-// LED pixel granularity is coarser than the game logic below -- overlap
-// for scoring is computed on the raw floats, not on which pixel lights up.
-void renderFryingLeds() {
+// Fry progress bar, filled left-to-right. Ramps amber -> green so a glance
+// tells you roughly how close to done you are, not just the raw fraction.
+void renderProgressBar() {
   strip.clear();
 
-  int targetPixel = (int)roundf(targetPos * (LED_COUNT - 1));
-  int handLo = (int)roundf((handPos - CATCH_ZONE_FRAC / 2) * (LED_COUNT - 1));
-  int handHi = (int)roundf((handPos + CATCH_ZONE_FRAC / 2) * (LED_COUNT - 1));
-  handLo = constrain(handLo, 0, LED_COUNT - 1);
-  handHi = constrain(handHi, 0, LED_COUNT - 1);
-
-  for (int i = handLo; i <= handHi; i++) {
-    strip.setPixelColor(i, strip.Color(120, 60, 0)); // basket zone: amber
-  }
-
-  bool overlap = (targetPixel >= handLo && targetPixel <= handHi);
-  strip.setPixelColor(targetPixel, overlap ? strip.Color(255, 255, 255)
-                                            : strip.Color(0, 180, 220)); // fish: cyan, white when caught
-
-  // Dim green wash under whatever isn't already lit, filled left-to-right
-  // by fry progress -- a simple readout without needing a second strip.
-  int progressPixels = (int)roundf(fryProgress * LED_COUNT);
-  for (int i = 0; i < progressPixels; i++) {
-    if (strip.getPixelColor(i) == 0) strip.setPixelColor(i, strip.Color(0, 40, 0));
+  int litPixels = (int)roundf(fryProgress * LED_COUNT);
+  for (int i = 0; i < litPixels; i++) {
+    uint8_t g = (uint8_t)(80 + fryProgress * 175);  // 80 -> 255
+    uint8_t r = (uint8_t)(150 * (1.0f - fryProgress)); // 150 -> 0
+    strip.setPixelColor(i, strip.Color(r, g, 0));
   }
 
   strip.show();
 }
 
+// Target zone bar: top band, y=2..13.
+#define TRACKER_TARGET_Y      2
+#define TRACKER_TARGET_HEIGHT 12
+
+// Hand marker box: bottom band, y=18..29.
+#define TRACKER_HAND_Y      18
+#define TRACKER_HAND_HEIGHT 12
+#define TRACKER_HAND_WIDTH  10
+
+// OLED tracker: a solid bar shows the target zone's currently-acceptable
+// range, a box shows the hand's actual measured position, both on the same
+// left=near / right=far axis so lining the box up under the bar means
+// you're in the zone. The panel is monochrome, so "in the zone" is shown
+// by the box switching from hollow to solid (and by the two lining up
+// vertically), not by color. Throttled separately from the LED strip
+// since a full-frame I2C push is slower than a NeoPixel update.
+void renderTrackerOled(bool overlap) {
+  uint32_t now = millis();
+  if (now - lastOledMs < OLED_UPDATE_INTERVAL_MS) return;
+  lastOledMs = now;
+
+  display.clearDisplay();
+
+  // Target zone bar spans the actual catch-zone width, in screen space.
+  // Screen X is flipped relative to pos (left = near = pos 1.0), so the
+  // "low" edge in pos-space lands on the right in screen-space.
+  int targetXLo = posToScreenX(targetPos + CATCH_ZONE_FRAC / 2);
+  int targetXHi = posToScreenX(targetPos - CATCH_ZONE_FRAC / 2);
+  targetXLo = constrain(targetXLo, 0, OLED_WIDTH - 1);
+  targetXHi = constrain(targetXHi, 0, OLED_WIDTH - 1);
+  display.fillRect(targetXLo, TRACKER_TARGET_Y, targetXHi - targetXLo + 1,
+                    TRACKER_TARGET_HEIGHT, SSD1306_WHITE);
+
+  // Hand marker box, filled solid when it's inside the target zone.
+  int handX = posToScreenX(handPos);
+  int handXLo = constrain(handX - TRACKER_HAND_WIDTH / 2, 0, OLED_WIDTH - TRACKER_HAND_WIDTH);
+  if (overlap) {
+    display.fillRect(handXLo, TRACKER_HAND_Y, TRACKER_HAND_WIDTH, TRACKER_HAND_HEIGHT, SSD1306_WHITE);
+  } else {
+    display.drawRect(handXLo, TRACKER_HAND_Y, TRACKER_HAND_WIDTH, TRACKER_HAND_HEIGHT, SSD1306_WHITE);
+  }
+
+  display.display();
+}
+
 void flashResult(bool success) {
+  display.clearDisplay();
+  display.setTextSize(2);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(0, 8);
+  display.print(success ? "PERFECT!" : "BURNT!");
+  display.display();
+
   uint32_t color = success ? strip.Color(0, 150, 0) : strip.Color(150, 0, 0);
   for (int i = 0; i < 3; i++) {
     strip.fill(color);
@@ -211,6 +296,15 @@ void flashResult(bool success) {
     strip.show();
     delay(150);
   }
+}
+
+void showIdleScreen() {
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(0, 12);
+  display.print("Scan an item to fry");
+  display.display();
 }
 
 void setup() {
@@ -223,6 +317,13 @@ void setup() {
   strip.begin();
   strip.clear();
   strip.show();
+
+  Wire.begin(OLED_SDA_PIN, OLED_SCL_PIN);
+  if (!display.begin(SSD1306_SWITCHCAPVCC, OLED_ADDRESS)) {
+    Serial.println("OLED init failed");
+  } else {
+    showIdleScreen();
+  }
 
   SPI.begin(SCK_PIN, MISO_PIN, MOSI_PIN, -1); // CS is driven by MFRC522 via SS_PIN
   rfid.PCD_Init();
@@ -271,9 +372,10 @@ void loop() {
       targetPos = 0.5f;
       targetVel = 0.0f;
       darting = false;
-      fryProgress = 0.0f;
+      fryProgress = FRY_START_PROGRESS;
       lastSampleMs = millis();
       lastPingMs = 0;
+      fryStartMs = millis();
       state = FRYING;
       break;
     }
@@ -295,13 +397,19 @@ void loop() {
       float catchHi = handPos + CATCH_ZONE_FRAC / 2;
       bool overlap = (targetPos >= catchLo && targetPos <= catchHi);
 
-      fryProgress += (overlap ? PROGRESS_FILL_PER_SEC : -PROGRESS_DRAIN_PER_SEC) * dt;
-      fryProgress = constrain(fryProgress, 0.0f, 1.0f);
+      bool inGrace = (now - fryStartMs < FRY_GRACE_MS);
+      if (!inGrace) {
+        fryProgress += (overlap ? PROGRESS_FILL_PER_SEC : -PROGRESS_DRAIN_PER_SEC) * dt;
+        fryProgress = constrain(fryProgress, 0.0f, 1.0f);
+      }
 
-      renderFryingLeds();
+      renderProgressBar();
+      renderTrackerOled(overlap);
 
-      if (fryProgress >= 1.0f) state = DONE_SUCCESS;
-      else if (fryProgress <= 0.0f) state = DONE_FAIL;
+      if (!inGrace) {
+        if (fryProgress >= 1.0f) state = DONE_SUCCESS;
+        else if (fryProgress <= 0.0f) state = DONE_FAIL;
+      }
       break;
     }
 
@@ -318,6 +426,7 @@ void loop() {
 
       strip.clear();
       strip.show();
+      showIdleScreen();
       state = IDLE;
       break;
     }
@@ -331,6 +440,7 @@ void loop() {
 
       strip.clear();
       strip.show();
+      showIdleScreen();
       state = IDLE;
       break;
     }
