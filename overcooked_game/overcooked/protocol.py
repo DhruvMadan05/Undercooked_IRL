@@ -49,12 +49,14 @@ class TaskKind(IntEnum):
 class DisplayMode(IntEnum):
     IDLE = 0
     CALIBRATED = 1
+    BURNT = 4
     SUCCESS = 5
     REJECT = 6
     DISCONNECTED = 7
     GAME_OVER = 8
     PLATE_CLEAN = 9
     PLATE_DIRTY = 10
+    PATTERN_CUE = 11  # level = pattern id to do now; +6 blinks it (time running out)
 
 
 # Names used in level.toml and the UI.

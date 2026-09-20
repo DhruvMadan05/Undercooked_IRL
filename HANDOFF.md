@@ -23,13 +23,13 @@ what they are told, the bridge is a dumb relay. Reset = one function call.
 | `shared/TagReader/` | `PresenceTracker` (pure logic, native-tested) + `PresenceReader` (RC522, WUPA polling) |
 | `shared/StationCore/` | `Display` (LEDs), `Session` (Hello/Welcome/heartbeat), `Station` (glue), `StationTask` interface, `StandardWiring.h` (pin map), `StandardStation.h` (one-object station) |
 | `overcooked_cutting_board/` | Station: `PressTask` counts limit-switch presses (GPIO14). Also has the `native` unit-test env |
-| `overcooked_pan/` | Station: `JoystickPatternTask` (analog X/Y GPIO34/35), pure `PatternTracker` (circle / zigzag), native tests |
+| `overcooked_pan/` | Station: `JoystickPatternTask` (analog X/Y GPIO34/35, click GPIO14), pure `PatternTracker` (circle / zigzag / hold / shake / press / flick), native tests. The Simon Says rules (random gesture per step, time bonus, burn) are server-side in `kinds.SimonPan` |
 | `deep_fryer_station/` | Station: `FryTask` (HC-SR04 hand height GPIO4/35, SSD1306 OLED I2C GPIO21/22), pure `fryer::ProgressTracker`/`overlaps()` (target overlap + fill/drain scoring), native tests |
 | `sink_station/` | Station: `ScrubTask` (analog joystick GPIO34/35, same pins as the pan), pure `scrub::ScrubTracker` (counts milliseconds of active circling), native tests |
 | `overcooked_reader_station/` | Plate / delivery: same firmware, env picks the `StationKind` (`-e plate|delivery`, one at a time) |
 | `overcooked_server/` | **The bridge** (name is historical): ESP-NOW <-> USB serial + its own RC522 for calibration |
 | `overcooked_game/` | Python game server (`overcooked/` package), `level.toml`, browser UI in `overcooked/static/`, pytest suite |
-| `Overcooked_test/` | Early scratch project from before this work. Ignore it. |
+| `Overcooked_test/` | Early scratch project from before this work: the standalone `FryingPanSimonSays` prototype the pan's rules came from. Reference only, not built. |
 
 ## Protocol (v2)
 - ESP-NOW packet = `{magic 0xC7, type, seq, flags}` + packed little-endian payload (<= 32 bytes). `flags` bit0 = reliable.
@@ -38,6 +38,9 @@ what they are told, the bridge is a dumb relay. Reset = one function call.
   reliability per message (used for one-shot LED flashes, which must not be lost).
 - Types: `Hello, Heartbeat, TagPlaced, TagRemoved(+progress), TaskProgress, TaskDone` (station -> server),
   `Welcome, Accept(task, goal, progress, param), Reject, SetDisplay(mode, level)` (server -> station).
+  An `Accept` for the tag already running a task re-targets it (new param/goal, count never goes back):
+  this is how the pan's Simon Says changes the asked-for gesture after every step. `SetDisplay(PatternCue,
+  pattern id)` fills the strip in that gesture's colour (`Display.cpp` `patternColor`); +6 makes it blink.
 - Station link: broadcasts `Hello` until `Welcome`, then unicasts to the bridge MAC with a 1 Hz `Heartbeat`;
   3.5 s of silence -> back to `Hello` (station shows a slow red blink). A `Welcome` while already connected
   means the server restarted, so the station re-announces the tag on it. The server sends `Welcome` on the first
@@ -52,9 +55,15 @@ what they are told, the bridge is a dumb relay. Reset = one function call.
 ## Game model (Python, `overcooked_game/overcooked/`)
 - `engine.py` `Game`: pure logic. Fed events (`handle`), a clock (`tick`, injectable `now`) and UI actions
   (`action("start_game")` etc.); sends via an injected callable. No serial/network/wall clock inside it, so tests run on a fake clock.
-- `kinds.py`: one `Behavior` per station kind (`TaskStation` for cutting board + pan + deep fryer, `Sink`, `PlateStation`, `Delivery`).
+- `kinds.py`: one `Behavior` per station kind (`TaskStation` for cutting board + deep fryer, `SimonPan`, `Sink`, `PlateStation`, `Delivery`).
   Rules in code, numbers/menu in `level.toml` (parsed and validated by `config.py`).
-- `model.py`: `Item` (one physical tag: ingredient or plate; state raw/chopped/cooked/consumed; progress;
+- **Pan = Simon Says** (`SimonPan`): `pan = { goal, seconds, bonus_s, bonus_cap_s, patterns = [..] }`. The server picks
+  a random gesture (never the same twice running), re-`Accept`s with the next one on every `TaskProgress`, gives back
+  `bonus_s x chain` (up to `bonus_cap_s`) per correct gesture, and burns the food when `seconds` run out before `goal`
+  gestures land. Gesture count is `item.progress`, time used is `item.pan_ms`, so it resumes on any pan. The firmware
+  cannot tell a wrong gesture from none, so there is no miss penalty. `Overcooked_test/` holds the original standalone
+  prototype (`FryingPanSimonSays.cpp`, OLED + on-device timer) this was ported from.
+- `model.py`: `Item` (one physical tag: ingredient or plate; state raw/chopped/cooked/burnt/consumed; progress;
   plate `contents` and `home_mac`), `Station`, `Order`, `Phase`.
 - Phases: `cal_master -> cal_stations -> cal_food -> ready -> countdown -> playing -> ended`.
 - **Calibration**: touch any tag to the *bridge's* reader (becomes the calibration tag) -> touch it to each station
@@ -84,8 +93,9 @@ what they are told, the bridge is a dumb relay. Reset = one function call.
   green) or `PlateDirty` (dull brown), from `PlateStation.display`. Colours are in `shared/StationCore/src/Display.cpp`.
   These two modes (9, 10) are new; wire layout unchanged, so `kProtocolVersion` stays 2 and older firmware just draws
   nothing for them. Reflash the plate reader(s) (`-e plate`) to get them.
-- The pot station was removed (station kind 2 and display modes 2-4 are retired but their wire ids are left
-  unused, so the other stations keep their ids and need no reflash). Delivered/thrown-away food respawns as RAW after `respawn_s`; loose food on the delivery station is trashed
+- The pot station was removed (station kind 2 and display modes 2-3 are retired but their wire ids are left
+  unused, so the other stations keep their ids and need no reflash). Display mode 4 (`Burnt`) lives on for the pan, and
+  the pan's `PatternCue` is mode 11 (after the plate clean/dirty modes). Delivered/thrown-away food respawns as RAW after `respawn_s`; loose food on the delivery station is trashed
   (the bin). Orders spawn from recipes, expire with a penalty, deliveries score with a time bonus.
 - `sim.py`: `SimBridge` speaks the real bridge line protocol with virtual stations that mimic the firmware, so the
   whole stack (link codec, Game, UI) runs with no hardware: `python -m overcooked --sim`.

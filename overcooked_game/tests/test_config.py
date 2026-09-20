@@ -16,7 +16,7 @@ def test_shipped_level_loads():
 
 
 def test_states_can_be_overridden():
-    level = parse_level({"ingredient": {"veg": {"pan": {"goal": 5, "from": "chopped"}}}})
+    level = parse_level({"ingredient": {"veg": {"pan": {"goal": 5, "seconds": 20, "from": "chopped"}}}})
     proc = level.ingredients["veg"].processes["pan"]
     assert (proc.from_state, proc.to_state) == (ItemState.CHOPPED, ItemState.COOKED)
 
@@ -39,7 +39,8 @@ def test_wash_time_defaults_and_is_limited():
 @pytest.mark.parametrize("data,text", [
     ({"stations": {"blender": 1}}, "unknown station"),
     ({"ingredient": {"x": {"cutting_board": {}}}}, "goal must be"),
-    ({"ingredient": {"x": {"pan": {"goal": 3, "pattern": "spiral"}}}}, "unknown pattern"),
+    ({"ingredient": {"x": {"pan": {"goal": 3, "seconds": 10, "patterns": ["spiral"]}}}}, "unknown pattern"),
+    ({"ingredient": {"x": {"pan": {"goal": 3}}}}, "seconds must be"),
     ({"ingredient": {"x": {"grill": {"goal": 3}}}}, "unknown key"),
     ({"ingredient": {"x": {"count": 0}}}, "count must be"),
     ({"recipe": {"r": {"needs": ["ghost:raw"]}}}, "unknown ingredient"),

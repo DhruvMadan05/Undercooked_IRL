@@ -10,7 +10,7 @@ from .model import ItemState
 from .protocol import KIND_BY_NAME
 
 # Joystick patterns the pan firmware understands (Accept.param).
-PATTERN_IDS = {"circle": 0, "zigzag": 1, "hold": 2, "shake": 3}
+PATTERN_IDS = {"circle": 0, "zigzag": 1, "hold": 2, "shake": 3, "press": 4, "flick": 5}
 
 # (from, to) when level.toml does not say.
 DEFAULT_STATES = {
@@ -30,8 +30,11 @@ class Process:
     station: str
     from_state: ItemState
     to_state: ItemState
-    goal: int = 0            # presses / pattern steps (task stations)
-    pattern: str = "circle"  # pan only
+    goal: int = 0                   # presses / correct gestures (task stations)
+    patterns: tuple[str, ...] = ()  # pan only: gestures it asks for, empty = all the firmware knows
+    seconds: float = 0.0            # pan only: time to land all goal gestures before it burns
+    bonus_s: float = 0.0            # pan only: time given back per correct gesture, times the chain length
+    bonus_cap_s: float = 0.0        # pan only: most a single gesture can give back
 
 
 @dataclass(frozen=True)
@@ -78,17 +81,27 @@ def _state(value: str, where: str) -> ItemState:
 def _process(ingredient: str, station: str, raw: dict) -> Process:
     where = f"ingredient.{ingredient}.{station}"
     default_from, default_to = DEFAULT_STATES[station]
+    patterns = raw.get("patterns", [])
+    if isinstance(patterns, str):
+        patterns = [patterns]
     proc = Process(
         station=station,
         from_state=_state(raw.get("from", default_from.value), where),
         to_state=_state(raw.get("to", default_to.value), where),
         goal=int(raw.get("goal", 0)),
-        pattern=str(raw.get("pattern", "circle")),
+        patterns=tuple(str(pt) for pt in patterns),
+        seconds=float(raw.get("seconds", 0)),
+        bonus_s=float(raw.get("bonus_s", 0)),
+        bonus_cap_s=float(raw.get("bonus_cap_s", 0)),
     )
     if station in ("cutting_board", "pan", "deep_fryer") and proc.goal <= 0:
         raise ConfigError(f"{where}: goal must be > 0")
-    if station == "pan" and proc.pattern not in PATTERN_IDS:
-        raise ConfigError(f"{where}: unknown pattern {proc.pattern!r} (known: {', '.join(PATTERN_IDS)})")
+    if station == "pan":
+        unknown = [pt for pt in proc.patterns if pt not in PATTERN_IDS]
+        if unknown:
+            raise ConfigError(f"{where}: unknown pattern {unknown[0]!r} (known: {', '.join(PATTERN_IDS)})")
+    if station == "pan" and proc.seconds <= 0:
+        raise ConfigError(f"{where}: seconds must be > 0")
     return proc
 
 

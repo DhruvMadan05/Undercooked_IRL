@@ -24,12 +24,14 @@ namespace station {
 
 class StandardStation {
  public:
-  StandardStation(oc::StationKind kind, StationTask *task = nullptr)
+  // extraDisplay: a second, independent display (e.g. the pan's OLED) driven
+  // off the same server messages as the LED strip - see DisplaySink.h.
+  StandardStation(oc::StationKind kind, StationTask *task = nullptr, DisplaySink *extraDisplay = nullptr)
       : rfid_(wiring::kRfidSs, wiring::kRfidRst),
         reader_(rfid_),
         strip_(wiring::kLedCount, wiring::kLedPin, NEO_GRB + NEO_KHZ800),
         display_(strip_, wiring::kLedBrightness),
-        station_(kind, reader_, display_, task) {}
+        station_(kind, reader_, display_, task, extraDisplay) {}
 
   // Call from setup(), after Serial.begin().
   void begin() {

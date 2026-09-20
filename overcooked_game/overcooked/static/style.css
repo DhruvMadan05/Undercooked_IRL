@@ -96,6 +96,7 @@ button.small { padding: 4px 10px; font-size: 13px; }
 .check .mac { color: var(--muted); font-size: 12px; margin-left: auto; font-family: ui-monospace, monospace; }
 .row { display: flex; gap: 10px; flex-wrap: wrap; }
 
+.item.burnt { color: var(--bad); }
 .log { list-style: none; margin: 0; padding: 0; max-height: 280px; overflow-y: auto; font-size: 14px; display: flex; flex-direction: column-reverse; }
 .log li { padding: 3px 0; border-bottom: 1px solid var(--card-2); }
 .log .k-ok { color: var(--good); } .log .k-warn { color: var(--warn); } .log .k-error { color: var(--bad); }

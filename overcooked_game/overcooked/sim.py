@@ -57,6 +57,9 @@ class SimStation:
                 self.state = "passive"
             else:
                 self.state, self.goal, self.progress = "active", msg.goal, msg.progress
+        elif isinstance(msg, p.Accept) and self.state == "active" and msg.uid == self.tag:
+            # Re-target, as the firmware does: new goal/pattern, count never goes back.
+            self.goal, self.progress = msg.goal, max(self.progress, msg.progress)
         elif isinstance(msg, p.Reject) and self.state == "awaiting" and msg.uid == self.tag:
             self.state = "rejected"
 

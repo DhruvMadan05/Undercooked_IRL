@@ -25,6 +25,27 @@ bool isFlash(DisplayMode mode) {
          mode == DisplayMode::Reject;
 }
 
+struct Rgb {
+  uint8_t r, g, b;
+};
+
+// One colour per oc::Pattern, so the pan's Simon Says can say "do this one"
+// on a bare LED strip. Kept away from the orange/red family the burnt
+// and plate-dirty modes use.
+Rgb patternColor(uint8_t pattern) {
+  switch (pattern) {
+    case (uint8_t)oc::Pattern::Circle: return {0, 0, 255};     // blue
+    case (uint8_t)oc::Pattern::Zigzag: return {255, 255, 0};   // yellow
+    case (uint8_t)oc::Pattern::Hold:   return {160, 0, 255};   // purple
+    case (uint8_t)oc::Pattern::Shake:  return {255, 0, 150};   // pink
+    case (uint8_t)oc::Pattern::Press:  return {255, 255, 255}; // white
+    case (uint8_t)oc::Pattern::Flick:  return {0, 255, 255};   // cyan
+    default:                           return {0, 0, 0};
+  }
+}
+
+constexpr uint8_t kPatternCount = 6;
+
 } // namespace
 
 void Display::begin() {
@@ -45,12 +66,13 @@ uint8_t Display::litFor(uint32_t value, uint32_t goal, uint8_t count) const {
   return (value * count + goal - 1) / goal;
 }
 
-void Display::setMode(DisplayMode mode, uint8_t /*level*/) {
+void Display::setMode(DisplayMode mode, uint8_t level) {
   if (isFlash(mode)) {
     flash(mode);
     return;
   }
   base_ = mode;
+  baseLevel_ = level;
 }
 
 void Display::flash(DisplayMode mode) {
@@ -98,12 +120,23 @@ void Display::update(uint32_t now) {
       case DisplayMode::GameOver:
         for (uint8_t i = 0; i < n; i++) frame[i] = color(255, 255, 255);
         break;
+      case DisplayMode::Burnt:
+        for (uint8_t i = 0; i < n; i++) frame[i] = color(255, 0, 0);
+        break;
       case DisplayMode::PlateClean:
         for (uint8_t i = 0; i < n; i++) frame[i] = color(0, 200, 0);
         break;
       case DisplayMode::PlateDirty: // dull brown; on WS2812B a dim orange reads as brown
         for (uint8_t i = 0; i < n; i++) frame[i] = color(150, 55, 0);
         break;
+      case DisplayMode::PatternCue: {
+        bool lowTime = baseLevel_ >= kPatternCount;
+        if (!lowTime || (now / 200) % 2 == 0) {
+          Rgb c = patternColor(baseLevel_ % kPatternCount);
+          for (uint8_t i = 0; i < n; i++) frame[i] = color(c.r, c.g, c.b);
+        }
+        break;
+      }
       default:
         break;
     }

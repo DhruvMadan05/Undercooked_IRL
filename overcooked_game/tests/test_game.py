@@ -135,13 +135,91 @@ def test_stale_task_messages_are_ignored(h):
 
 # ---- pan --------------------------------------------------------------------------------
 
-def test_pan_sends_the_pattern(h):
+ZIGZAG, CIRCLE = 1, 0  # the two patterns the test level allows on the pan
+
+
+def test_pan_asks_for_a_new_gesture_after_each_step(h):
     h.start_round()
     h.place(PAN, PATTY)
-    accept = h.last(PAN, p.Accept)
-    assert (accept.task, accept.goal, accept.param) == (p.TaskKind.JOYSTICK_PATTERN, 3, 1)  # zigzag = 1
+    first = h.last(PAN, p.Accept)
+    assert (first.task, first.goal, first.progress) == (p.TaskKind.JOYSTICK_PATTERN, 3, 0)
+    assert first.param in (ZIGZAG, CIRCLE)
+
+    h.progress(PAN, PATTY, 1)
+    second = h.last(PAN, p.Accept)
+    assert (second.goal, second.progress) == (3, 1)
+    assert second.param != first.param  # never the same one twice running
+
+    h.progress(PAN, PATTY, 2)
+    third = h.last(PAN, p.Accept)
+    assert (third.progress, third.param) == (2, first.param)
+
+    h.clear()
+    h.progress(PAN, PATTY, 3)  # goal reached: nothing more to ask for
+    assert h.to(PAN, p.Accept) == []
     h.done(PAN, PATTY)
     assert h.item(PATTY).state == ItemState.COOKED
+
+
+def test_pan_cue_shows_the_gesture_and_blinks_when_time_is_short(h):
+    h.start_round()
+    h.place(PAN, PATTY)
+    asked = h.last(PAN, p.Accept).param
+    assert h.game._desired_display(h.game.stations[PAN]) == (p.DisplayMode.PATTERN_CUE, asked)
+
+    h.advance(17)  # 3 of 20 s left: under the 20% mark
+    assert h.game._desired_display(h.game.stations[PAN]) == (p.DisplayMode.PATTERN_CUE, asked + 6)
+
+
+def test_pan_burns_when_time_runs_out(h):
+    h.start_round()
+    h.place(PAN, PATTY)
+    h.advance(19.5)
+    assert h.item(PATTY).state == ItemState.RAW
+    h.advance(1)
+    assert h.item(PATTY).state == ItemState.BURNT
+    assert h.game._desired_display(h.game.stations[PAN])[0] == p.DisplayMode.BURNT
+    h.clear()
+    h.progress(PAN, PATTY, 1)  # too late, nothing happens
+    assert h.to(PAN, p.Accept) == []
+
+
+def test_pan_correct_gestures_give_time_back(h):
+    h.start_round()
+    h.place(PAN, PATTY)
+    h.advance(10)
+    used = h.item(PATTY).pan_ms
+    assert 9_500 <= used <= 10_000  # the fake clock's 0.1 s steps round down a little
+    h.progress(PAN, PATTY, 1)  # chain 1: 2 s back
+    assert h.item(PATTY).pan_ms == used - 2_000
+    h.progress(PAN, PATTY, 2)  # chain 2: 4 s, capped at 3
+    assert h.item(PATTY).pan_ms == used - 5_000
+
+
+def test_pan_pauses_and_resumes_when_picked_up(h):
+    h.start_round()
+    h.place(PAN, PATTY)
+    h.advance(5)
+    h.progress(PAN, PATTY, 1)
+    h.remove(PAN, PATTY, 1)
+    h.advance(30)  # off the pan: the clock does not run
+    assert h.item(PATTY).state == ItemState.RAW
+    h.place(PAN, PATTY)
+    accept = h.last(PAN, p.Accept)
+    assert accept.progress == 1
+    h.advance(19.5)  # only 3 of the 20 s were used before (5 - 2 bonus)
+    assert h.item(PATTY).state == ItemState.BURNT
+
+
+def test_pan_ignores_stale_progress(h):
+    h.start_round()
+    h.place(PAN, PATTY)
+    h.progress(PAN, PATTY, 2)
+    h.clear()
+    h.progress(PAN, PATTY, 2)  # the same report again (unreliable messages)
+    h.progress(PAN, PATTY, 1)
+    assert h.to(PAN, p.Accept) == []
+    assert h.item(PATTY).progress == 2
 
 
 def test_pan_rejects_tomato(h):
@@ -149,6 +227,24 @@ def test_pan_rejects_tomato(h):
     h.clear()
     h.place(PAN, TOMATO1)
     assert h.last(PAN, p.Reject) is not None
+
+
+def test_burnt_food_cannot_be_plated_but_can_be_trashed(h):
+    h.start_round()
+    h.place(PAN, PATTY)
+    h.advance(21)
+    assert h.item(PATTY).state == ItemState.BURNT
+    h.remove(PAN, PATTY)
+
+    h.clear()
+    h.place(PLT, PATTY)
+    assert h.last(PLT, p.Reject) is not None
+
+    h.remove(PLT, PATTY)
+    h.place(DEL, PATTY)  # loose food on the delivery station = bin
+    assert h.item(PATTY).state == ItemState.CONSUMED
+    h.advance(3.2)
+    assert h.item(PATTY).state == ItemState.RAW
 
 
 # ---- deep fryer -----------------------------------------------------------------------------

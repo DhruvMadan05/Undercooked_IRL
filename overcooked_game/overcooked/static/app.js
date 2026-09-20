@@ -162,7 +162,7 @@ function renderStations(s) {
     const what = st.item
       ? `${esc(st.item)} <span class="tag-state">${esc(st.item_state || "")}</span>`
       : `<span class="empty">empty</span>`;
-    const pct = st.progress != null ? `<div class="bar"><i style="width:${Math.round(100 * st.progress)}%"></i></div>` : "";
+    const pct = st.progress != null ? `<div class="bar ${st.note === "burnt" ? "low" : ""}"><i style="width:${Math.round(100 * st.progress)}%"></i></div>` : "";
     return `<div class="station ${st.online ? "" : "offline"}">
       <div class="head"><span class="icon">${ICONS[st.kind] || "?"}</span>
         <span class="name">${esc(st.label)}</span><span class="dot ${st.online ? "on" : ""}" title="${st.online ? "online" : "offline"}"></span></div>

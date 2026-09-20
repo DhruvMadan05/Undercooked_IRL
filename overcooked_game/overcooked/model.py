@@ -22,6 +22,7 @@ class ItemState(str, Enum):
     RAW = "raw"
     CHOPPED = "chopped"
     COOKED = "cooked"
+    BURNT = "burnt"        # the pan ran out of time; only good for the bin
     CONSUMED = "consumed"  # on a delivered plate / trashed, back to RAW after respawn_s
 
 
@@ -44,6 +45,7 @@ class Item:
     state: ItemState = ItemState.RAW
     progress: int = 0                # task units, or milliseconds of scrubbing for a plate
     progress_kind: str | None = None  # station kind the progress belongs to
+    pan_ms: int = 0                  # pan: time used up towards its Simon Says deadline
     respawn_at: float | None = None
     contents: list[PlateEntry] = field(default_factory=list)  # plates only
     home_mac: str | None = None  # plates only: the plate reader (station) this tag belongs to
@@ -61,6 +63,7 @@ class Item:
         self.state = ItemState.RAW
         self.progress = 0
         self.progress_kind = None
+        self.pan_ms = 0
         self.respawn_at = None
         self.contents.clear()
         self.dirty = False

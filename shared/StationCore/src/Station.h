@@ -5,7 +5,8 @@
 //
 // Per tag on the reader:
 //   placed   -> TagPlaced sent, wait for the server
-//   Accept   -> task starts (or resumes) with the server's goal and progress
+//   Accept   -> task starts (or resumes) with the server's goal and progress;
+//               another Accept while it runs re-targets it (new param/goal)
 //   Reject   -> red flash, task stays off
 //   goal hit -> TaskDone sent, green flash
 //   removed  -> TagRemoved sent with the task's progress, task stops
@@ -24,9 +25,11 @@ namespace station {
 class Station {
  public:
   // task may be null for a station with no input task (plate, delivery).
+  // extraDisplay may be a second, independent display (e.g. the pan's OLED):
+  // every call display_ gets is also made on it, off the same server messages.
   Station(oc::StationKind kind, tagreader::PresenceReader &reader, Display &display,
-          StationTask *task = nullptr)
-      : reader_(reader), display_(display), task_(task), session_(kind) {}
+          StationTask *task = nullptr, DisplaySink *extraDisplay = nullptr)
+      : reader_(reader), display_(display), extraDisplay_(extraDisplay), task_(task), session_(kind) {}
 
   // Call after oc::begin().
   void begin();
@@ -50,8 +53,15 @@ class Station {
   void reportProgress(uint32_t now);
   oc::TagId tagOf(const tagreader::Uid &uid) const;
 
+  // Forwarded to display_ and, if present, extraDisplay_ - see DisplaySink.h.
+  void setDisplayMode(oc::DisplayMode mode, uint8_t level);
+  void flashDisplay(oc::DisplayMode mode);
+  void setDisplayProgress(uint16_t value, uint16_t goal);
+  void clearDisplayProgress();
+
   tagreader::PresenceReader &reader_;
   Display &display_;
+  DisplaySink *extraDisplay_;
   StationTask *task_;
   Session session_;
 

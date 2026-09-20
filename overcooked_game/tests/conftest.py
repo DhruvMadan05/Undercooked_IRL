@@ -40,7 +40,7 @@ cutting_board = { goal = 5 }
 
 [ingredient.patty]
 count = 1
-pan = { goal = 3, pattern = "zigzag" }
+pan = { goal = 3, seconds = 20, bonus_s = 2, bonus_cap_s = 3, patterns = ["zigzag", "circle"] }
 
 [ingredient.bun]
 count = 1
