@@ -113,6 +113,12 @@ void Display::update(uint32_t now) {
       case DisplayMode::GameOver:
         for (uint8_t i = 0; i < n; i++) frame[i] = color(255, 255, 255);
         break;
+      case DisplayMode::PlateClean:
+        for (uint8_t i = 0; i < n; i++) frame[i] = color(0, 200, 0);
+        break;
+      case DisplayMode::PlateDirty: // dull brown; on WS2812B a dim orange reads as brown
+        for (uint8_t i = 0; i < n; i++) frame[i] = color(150, 55, 0);
+        break;
       default:
         break;
     }

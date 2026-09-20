@@ -48,6 +48,7 @@ class Item:
     respawn_at: float | None = None
     contents: list[PlateEntry] = field(default_factory=list)  # plates only
     home_mac: str | None = None  # plates only: the plate reader (station) this tag belongs to
+    dirty: bool = False          # plates only: used (served or dumped), needs washing before food goes on it
 
     @property
     def is_plate(self) -> bool:
@@ -63,6 +64,7 @@ class Item:
         self.progress_kind = None
         self.respawn_at = None
         self.contents.clear()
+        self.dirty = False
 
 
 @dataclass

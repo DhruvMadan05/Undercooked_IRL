@@ -6,8 +6,9 @@
 //   1. offline    - server not answering: one red pixel blinks slowly
 //   2. a flash    - one-shot Calibrated / Success / Reject, then back to 3.
 //   3. the base   - the last persistent mode from the server (Idle, Cooking,
-//                   Warning, Burnt, GameOver). Idle shows the task's progress
-//                   bar while a task is running, and nothing otherwise.
+//                   Warning, Burnt, GameOver, PlateClean, PlateDirty). Idle shows
+//                   the task's progress bar while a task is running, and nothing
+//                   otherwise.
 
 #include <Adafruit_NeoPixel.h>
 #include <OvercookedComm.h>

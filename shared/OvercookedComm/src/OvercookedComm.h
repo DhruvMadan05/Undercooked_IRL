@@ -102,6 +102,8 @@ enum class DisplayMode : uint8_t {
   Reject = 6,
   Disconnected = 7,
   GameOver = 8,
+  PlateClean = 9, // plate reader: the plate is clean and free for food
+  PlateDirty = 10, // plate reader: used, waiting to be washed
 };
 
 // ---- Messages --------------------------------------------------------------

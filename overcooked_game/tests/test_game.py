@@ -3,7 +3,7 @@ import pytest
 from conftest import BUN, CUT, DEL, FRY, MASTER, PAN, PATTY, PLATE, PLT, POT, POTATO, RICE, STRAY, TOMATO1, TOMATO2
 
 from overcooked import protocol as p
-from overcooked.model import ItemState, Phase
+from overcooked.model import ItemState, Order, Phase
 
 
 def chop(h, uid=TOMATO1):
@@ -283,6 +283,9 @@ def test_assembly_and_delivery_scores_an_order(h):
     assert g.delivered == 1
     assert 100 < g.score <= 120  # points + time bonus (delivered almost instantly)
     assert h.item(PLATE).contents == []
+    assert h.item(PLATE).dirty
+    assert h.last(DEL, p.SetDisplay).mode == p.DisplayMode.SUCCESS
+    assert h.last(PLT, p.SetDisplay).mode == p.DisplayMode.SUCCESS  # green on the plate's own reader
 
     # the tags recycle after respawn_s
     assert h.item(TOMATO1).state == ItemState.CONSUMED
@@ -291,22 +294,127 @@ def test_assembly_and_delivery_scores_an_order(h):
     assert h.item(BUN).state == ItemState.RAW
 
 
-def test_delivery_rejects_a_plate_nobody_ordered(h):
+def test_a_plate_nobody_ordered_is_dumped_for_a_penalty(h):
     h.start_round()
     h.game.orders.clear()
+    h.game.score = 30
     make_sandwich_plate(h)
     h.clear()
     h.place(DEL, PLATE)
+    assert h.last(DEL, p.Accept) is not None
+    assert h.last(DEL, p.Reject) is None
+    assert h.game.score == 30 - h.game.level.dump_penalty
+    assert h.game.delivered == 0
+    assert h.item(PLATE).contents == [] and h.item(PLATE).dirty
+    assert h.last(DEL, p.SetDisplay).mode == p.DisplayMode.REJECT
+    assert h.last(PLT, p.SetDisplay).mode == p.DisplayMode.REJECT  # red on the plate's own reader
+    assert [e for e in h.game.snapshot()["log"] if "dumped" in e["text"]]
+
+
+def test_a_mismatching_plate_is_dumped_even_while_orders_are_open(h):
+    h.start_round()
+    h.game.orders[:] = [Order(9, "bowl", ("patty:cooked", "rice:cooked"), 50, h.t, h.t + 40)]
+    make_sandwich_plate(h)  # tomato + bun: not the bowl
+    h.place(DEL, PLATE)
+    assert h.game.delivered == 0
+    assert h.item(PLATE).dirty
+    assert [o.id for o in h.game.orders] == [9]  # the open order stays open
+
+
+def test_a_dumped_plates_food_comes_back_raw(h):
+    h.start_round()
+    h.game.orders.clear()
+    make_sandwich_plate(h)
+    h.place(DEL, PLATE)
+    assert h.item(TOMATO1).state == ItemState.CONSUMED
+    h.advance(3.2)
+    assert h.item(TOMATO1).state == ItemState.RAW
+    assert h.item(BUN).state == ItemState.RAW
+
+
+def test_dump_penalty_never_takes_the_score_below_zero(h):
+    h.start_round()
+    h.game.orders.clear()
+    h.game.score = 2
+    make_sandwich_plate(h)
+    h.place(DEL, PLATE)
+    assert h.game.score == 0
+
+
+def test_a_dirty_plate_takes_no_food_and_cannot_be_served(h):
+    h.start_round()
+    h.game.orders.clear()
+    make_sandwich_plate(h)
+    h.place(DEL, PLATE)
+    h.remove(DEL, PLATE)
+    h.advance(3.2)
+
+    h.clear()
+    h.place(PLT, BUN)  # the plate reader refuses food for a dirty plate
+    assert h.last(PLT, p.Reject) is not None
+    assert h.item(PLATE).contents == []
+    assert h.item(BUN).state == ItemState.RAW
+    tile = next(s for s in h.game.snapshot()["stations"] if s["mac"] == PLT)
+    assert tile["note"] == "dirty, needs washing"
+
+    h.clear()
+    h.place(DEL, PLATE)  # and the delivery station refuses the dirty plate: no penalty, no flash
     assert h.last(DEL, p.Reject) is not None
     assert h.game.score == 0
-    assert len(h.item(PLATE).contents) == 2
 
 
-def test_delivery_rejects_an_empty_plate(h):
+def test_a_new_round_gives_clean_plates(h):
     h.start_round()
+    h.game.orders.clear()
+    make_sandwich_plate(h)
+    h.place(DEL, PLATE)
+    assert h.item(PLATE).dirty
+    h.game.action("end_game")
+    assert h.game.action("start_game") is None
+    assert not h.item(PLATE).dirty
+
+
+def test_plate_reader_leds_show_clean_or_dirty(h):
+    h.calibrate()
+    assert h.game._desired_display(h.game.stations[PLT])[0] == p.DisplayMode.IDLE  # nothing shown outside a round
+    h.game.action("start_game")
+    h.advance(3.2)
+    h.game.orders.clear()
+    assert h.game._desired_display(h.game.stations[PLT])[0] == p.DisplayMode.PLATE_CLEAN
+    assert h.last(PLT, p.SetDisplay).mode == p.DisplayMode.PLATE_CLEAN
+
+    make_sandwich_plate(h)
+    h.place(DEL, PLATE)  # dumped
+    h.advance(0.2)
+    assert h.item(PLATE).dirty
+    assert h.last(PLT, p.SetDisplay).mode == p.DisplayMode.PLATE_DIRTY
+    assert h.game._desired_display(h.game.stations[DEL])[0] == p.DisplayMode.IDLE  # only plate readers show this
+
+    h.game.action("end_game")
+    assert h.game._desired_display(h.game.stations[PLT])[0] == p.DisplayMode.GAME_OVER
+    h.game.action("start_game")
+    h.advance(3.2)
+    assert h.last(PLT, p.SetDisplay).mode == p.DisplayMode.PLATE_CLEAN  # new round, clean plate
+
+
+def test_a_delivered_plate_also_turns_dirty_on_the_leds(h):
+    h.start_round()
+    h.game.orders[:] = [Order(1, "sandwich", ("bun:raw", "tomato:chopped"), 100, h.t, h.t + 40)]
+    make_sandwich_plate(h)
+    h.place(DEL, PLATE)
+    assert h.game.delivered == 1
+    h.advance(0.2)
+    assert h.last(PLT, p.SetDisplay).mode == p.DisplayMode.PLATE_DIRTY
+
+
+def test_delivery_rejects_an_empty_plate_without_a_penalty(h):
+    h.start_round()
+    h.game.score = 30
     h.clear()
     h.place(DEL, PLATE)
     assert h.last(DEL, p.Reject) is not None
+    assert h.game.score == 30
+    assert not h.item(PLATE).dirty
 
 
 def test_burnt_food_cannot_be_plated_but_can_be_trashed(h):

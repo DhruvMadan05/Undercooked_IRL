@@ -70,6 +70,16 @@ what they are told, the bridge is a dumb relay. Reset = one function call.
   (`game.plate_for(station)` finds the plate whose `home_mac` is that reader); plate tags are rejected there.
   Touching a plate's tag at the delivery station serves what is on its reader. No `[plates]` in `level.toml`
   any more (it raises a `ConfigError`); plate count = `[stations] plate = N`.
+- **Dump + dirty plates**: at delivery a plate with no matching order is dumped (`Game.dump_plate`, `dump_penalty`
+  points, floored at 0); a matching one is delivered. Both go through `Game._use_up_plate`: food respawns raw after
+  `respawn_s`, `Item.dirty = True`. A dirty plate is rejected by its plate reader and by delivery (no penalty), and
+  the plate tile shows "dirty, needs washing". `Item.reset()` (new round / Reset) clears it. **There is no sink yet, so
+  today a plate is single-use per round**: the sink should just set `dirty = False` on the plate it washes.
+  The plate reader flashes SUCCESS (green x5) / REJECT (red x3) via `game.flash`, and the delivery station flashes the
+  same result. Between flashes a plate reader shows its plate's state during a round: `DisplayMode.PlateClean` (solid
+  green) or `PlateDirty` (dull brown), from `PlateStation.display`. Colours are in `shared/StationCore/src/Display.cpp`.
+  These two modes (9, 10) are new; wire layout unchanged, so `kProtocolVersion` stays 2 and older firmware just draws
+  nothing for them. Reflash the plate reader(s) (`-e plate`) to get them.
 - Pot is timed on the server (cook after `seconds`, burnt `burn_after` later, LED warning at 60%).
   Delivered/thrown-away food respawns as RAW after `respawn_s`; loose food on the delivery station is trashed
   (the way to recycle burnt food). Orders spawn from recipes, expire with a penalty, deliveries score with a time bonus.
@@ -138,8 +148,8 @@ Every firmware project sets `default_envs` so a bare `pio run` works; in `overco
 
 ## Sensible next steps
 1. Get hardware feedback and tune: removal miss count in `PresenceReader` (defaults 100 ms x 3), joystick dead zone,
-   the deep fryer's `NEAR_CM`/`FAR_CM`/`CATCH_ZONE_FRAC` and dart tuning (`FryTask.h`), goals and cook times in `level.toml`.
-2. If plate readers should show contents on their LEDs, add a `DisplayMode` (needs `OvercookedComm.h` + `protocol.py` + a `Display.cpp` case).
+   goals and cook times in `level.toml`.
+2. If plate readers should show what is on the plate (they show clean / dirty today), add a `DisplayMode` (needs `OvercookedComm.h` + `protocol.py` + a `Display.cpp` case).
 3. More than one tag on a reader (e.g. several foods on a plate at once) needs multi-tag reading in `PresenceReader`
    (RC522 anticollision) and a set-based `TagPlaced`/`TagRemoved`; deliberately not done.
 4. Real-time bridge health: only a hung-but-connected bridge is undetected today (no periodic ping).

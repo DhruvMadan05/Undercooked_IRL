@@ -9,6 +9,7 @@ order_interval_s = 25   # a new order appears this often ...
 max_orders = 4          # ... as long as fewer than this many are open
 order_time_s = 90       # default time to deliver an order (a recipe can override it)
 expire_penalty = 10     # points lost when an order runs out
+dump_penalty = 5        # points lost when a plate that matches no order is dumped at delivery
 time_bonus = 20         # extra points for a fast delivery (scaled by time left)
 respawn_s = 3           # delivered (or trashed) food tags come back as RAW after this
 plate_capacity = 4      # ingredients that fit on one plate
@@ -19,7 +20,7 @@ plate_capacity = 4      # ingredients that fit on one plate
 # Each plate has its own tag, which is touched to the delivery station to serve
 # what is on the plate reader (the wizard pairs each tag with its reader).
 [stations]
-cutting_board = 2
+cutting_board = 1
 pan = 1
 pot = 1
 deep_fryer = 1

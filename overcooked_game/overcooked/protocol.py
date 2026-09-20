@@ -55,6 +55,8 @@ class DisplayMode(IntEnum):
     REJECT = 6
     DISCONNECTED = 7
     GAME_OVER = 8
+    PLATE_CLEAN = 9
+    PLATE_DIRTY = 10
 
 
 # Names used in level.toml and the UI.

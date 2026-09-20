@@ -185,6 +185,8 @@ class PlateStation(Behavior):
         plate = game.plate_for(station)
         if plate is None:
             game.reject(station, item, "no plate tag is paired with this reader, recalibrate")
+        elif plate.dirty:
+            game.reject(station, item, "the plate is dirty, it needs washing")
         elif len(plate.contents) >= game.level.plate_capacity:
             game.reject(station, item, "plate is full")
         elif item.state == ItemState.BURNT:
@@ -196,17 +198,27 @@ class PlateStation(Behavior):
             game.flash(station, DisplayMode.CALIBRATED)
             game.log(f"{station.label}: {item.label} added to the plate", "ok")
 
+    def display(self, game, station):
+        plate = game.plate_for(station)
+        if plate is None:
+            return DisplayMode.IDLE, 0
+        return (DisplayMode.PLATE_DIRTY if plate.dirty else DisplayMode.PLATE_CLEAN), 0
+
     def describe(self, game, station):
         plate = game.plate_for(station)
         if not plate:
             return {}
+        if plate.dirty:
+            return {"note": "dirty, needs washing"}
         return {"note": "on the plate: " + (", ".join(e.key for e in plate.contents) or "nothing")}
 
 
 class Delivery(Behavior):
     """Serve a plate: touch its tag here and everything on its plate reader is
-    handed in. Any loose food placed here is thrown away
-    (it comes back as RAW after respawn_s), which is how burnt food is recycled."""
+    handed in. A plate that matches an open order scores it; any other plate is
+    dumped for a small penalty. Either way the food comes back as RAW after
+    respawn_s and the plate is dirty. Any loose food placed here is thrown away
+    the same way, which is how burnt food is recycled."""
 
     kind = StationKind.DELIVERY
     name = "delivery"
@@ -217,16 +229,24 @@ class Delivery(Behavior):
             game.accept(station, item)
             game.flash(station, DisplayMode.CALIBRATED)
             return
+        if item.dirty:
+            game.reject(station, item, "the plate is dirty, it needs washing")
+            return
         if not item.contents:
             game.reject(station, item, "the plate is empty")
             return
         order = game.match_order(item)
-        if order is None:
-            game.reject(station, item, "no open order matches this plate")
-            return
         game.accept(station, item)
-        game.complete_order(order, item)
-        game.flash(station, DisplayMode.SUCCESS)
+        if order:
+            game.complete_order(order, item)
+        else:
+            game.dump_plate(item)
+        # Green for a delivery, red for a dump, on the delivery station and on the plate's own reader.
+        result = DisplayMode.SUCCESS if order else DisplayMode.REJECT
+        game.flash(station, result)
+        reader = game.stations.get(item.home_mac) if item.home_mac else None
+        if reader:
+            game.flash(reader, result)
 
 
 BEHAVIORS: dict[StationKind, Behavior] = {

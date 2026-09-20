@@ -109,9 +109,21 @@ class Game:
         self.delivered += 1
         self.orders.remove(order)
         self.log(f"Delivered {order.recipe}: +{order.points + bonus}", "score")
+        self._use_up_plate(plate)
+
+    def dump_plate(self, plate: Item) -> None:
+        """A plate served with no matching order: its food is lost, for a small penalty."""
+        what = ", ".join(e.key for e in plate.contents)
+        self.score = max(0, self.score - self.level.dump_penalty)
+        self.log(f"Plate dumped ({what}): -{self.level.dump_penalty}", "warn")
+        self._use_up_plate(plate)
+
+    def _use_up_plate(self, plate: Item) -> None:
+        """Served or dumped: the food comes back raw, the plate is dirty until it is washed."""
         for entry in plate.contents:
             self._schedule_respawn(self.items[entry.uid])
         plate.contents.clear()
+        plate.dirty = True
 
     def trash(self, item: Item) -> None:
         self.log(f"{item.label} thrown away", "info")
@@ -527,7 +539,7 @@ class Game:
             "stations": [self._station_snapshot(s) for s in self.stations.values()],
             "items": [
                 {"uid": it.uid.hex(), "label": it.label, "state": it.state.value,
-                 "contents": [e.key for e in it.contents]}
+                 "contents": [e.key for e in it.contents], "dirty": it.dirty}
                 for it in self.items.values()
             ],
             "log": list(self._log)[-30:],
