@@ -28,7 +28,7 @@ class Display : public DisplaySink {
   void update(uint32_t now) override;
 
   // From the server. Calibrated / Success / Reject flash once; the rest stay
-  // until the next setMode. level is used by PatternCue (pattern id, +6 to blink).
+  // until the next setMode. level is used by PatternCue (pattern id, +4 to blink).
   void setMode(oc::DisplayMode mode, uint8_t level) override;
 
   // Local flash, e.g. celebrating a finished task without waiting for the server.

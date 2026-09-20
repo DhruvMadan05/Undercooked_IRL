@@ -91,8 +91,6 @@ enum class Pattern : uint8_t {
   Zigzag = 1, // swing it left and right
   Hold = 2,   // keep it centered, unmoving
   Shake = 3,  // swing it rapidly, either axis
-  Press = 4,  // hold the click button down
-  Flick = 5,  // push the stick up while clicking
 };
 
 // What the LEDs show when no task is drawing its own progress.
@@ -107,7 +105,7 @@ enum class DisplayMode : uint8_t {
   GameOver = 8,
   PlateClean = 9, // plate reader: the plate is clean and free for food
   PlateDirty = 10, // plate reader: used, waiting to be washed
-  PatternCue = 11, // level = the oc::Pattern to do now; +6 (i.e. 6-11) blinks it: time is running out
+  PatternCue = 11, // level = the oc::Pattern to do now; +4 (i.e. 4-7) blinks it: time is running out
 };
 
 // ---- Messages --------------------------------------------------------------

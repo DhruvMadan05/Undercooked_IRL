@@ -10,7 +10,7 @@ from .model import ItemState
 from .protocol import KIND_BY_NAME
 
 # Joystick patterns the pan firmware understands (Accept.param).
-PATTERN_IDS = {"circle": 0, "zigzag": 1, "hold": 2, "shake": 3, "press": 4, "flick": 5}
+PATTERN_IDS = {"circle": 0, "zigzag": 1, "hold": 2, "shake": 3}
 
 # (from, to) when level.toml does not say.
 DEFAULT_STATES = {

@@ -86,7 +86,7 @@ class PatternOled : public station::DisplaySink {
  private:
   static constexpr uint32_t kRenderIntervalMs = 40; // 25 Hz, plenty smooth for these animations
   static constexpr uint32_t kFlashMs = 700;
-  static constexpr uint8_t kPatternCount = 6;
+  static constexpr uint8_t kPatternCount = 4;
 
   // ---- one-shot flashes -----------------------------------------------------
   // Returns false once the flash has run its course.
@@ -114,7 +114,7 @@ class PatternOled : public station::DisplaySink {
 
   void drawIdle() {
     drawCentered("FRYING PAN", 4, 1);
-    if (progressShown_) drawProgressBar(progress_, goal_, false, 0);
+    if (progressShown_) drawProgressBar(progress_, goal_, false);
   }
 
   void drawPatternCue(uint32_t now) {
@@ -122,7 +122,7 @@ class PatternOled : public station::DisplaySink {
     bool lowTime = level_ >= kPatternCount;
     drawCentered(patternLabel(pattern), 0, 1);
     drawMoveIcon(pattern, now);
-    if (progressShown_) drawProgressBar(progress_, goal_, lowTime, now);
+    if (progressShown_) drawProgressBar(progress_, goal_, lowTime);
   }
 
   void drawFire(uint32_t now) {
@@ -154,7 +154,6 @@ class PatternOled : public station::DisplaySink {
   static constexpr int16_t kBaseR = 15;
   static constexpr int16_t kBallR = 6;
   static constexpr int16_t kReach = 11;
-  static constexpr int16_t kFlickRise = 14;
 
   void drawBase() { display_.drawCircle(kIconCx, kIconCy, kBaseR, SSD1306_WHITE); }
 
@@ -164,8 +163,6 @@ class PatternOled : public station::DisplaySink {
       case (uint8_t)oc::Pattern::Zigzag: drawZigzagIcon(now); break;
       case (uint8_t)oc::Pattern::Hold:   drawHoldIcon(now); break;
       case (uint8_t)oc::Pattern::Shake:  drawShakeIcon(now); break;
-      case (uint8_t)oc::Pattern::Press:  drawPressIcon(now); break;
-      case (uint8_t)oc::Pattern::Flick:  drawFlickIcon(now); break;
       default: drawBase(); break;
     }
   }
@@ -202,38 +199,12 @@ class PatternOled : public station::DisplaySink {
     display_.fillCircle(kIconCx + dx[(now / 130) % 4], kIconCy, kBallR, SSD1306_WHITE);
   }
 
-  // Press and hold: an even toggle between resting and pressed-in, with a
-  // baseline mark that only appears while "pressed".
-  void drawPressIcon(uint32_t now) {
-    drawBase();
-    bool pressed = (now / 500) % 2 == 1;
-    int y = pressed ? kIconCy + kReach : kIconCy;
-    display_.fillCircle(kIconCx, y, kBallR, SSD1306_WHITE);
-    if (pressed) display_.drawFastHLine(kIconCx - 10, kIconCy + kBaseR + 3, 20, SSD1306_WHITE);
-  }
-
-  // Press-and-hold, then snap up: ghost marks along the path read as a fast
-  // upward snap rather than the ball teleporting.
-  void drawFlickIcon(uint32_t now) {
-    drawBase();
-    if (now % 1400 < 800) {
-      display_.fillCircle(kIconCx, kIconCy + kReach, kBallR, SSD1306_WHITE);
-      display_.drawFastHLine(kIconCx - 10, kIconCy + kBaseR + 3, 20, SSD1306_WHITE);
-    } else {
-      display_.fillCircle(kIconCx, kIconCy - kFlickRise, kBallR, SSD1306_WHITE);
-      display_.fillCircle(kIconCx, kIconCy, 4, SSD1306_WHITE);
-      display_.fillCircle(kIconCx, kIconCy + kReach, 2, SSD1306_WHITE);
-    }
-  }
-
   static const char *patternLabel(uint8_t pattern) {
     switch (pattern) {
       case (uint8_t)oc::Pattern::Circle: return "CIRCLE IT";
       case (uint8_t)oc::Pattern::Zigzag: return "ZIGZAG IT";
       case (uint8_t)oc::Pattern::Hold:   return "HOLD IT";
       case (uint8_t)oc::Pattern::Shake:  return "SHAKE IT";
-      case (uint8_t)oc::Pattern::Press:  return "PRESS IT";
-      case (uint8_t)oc::Pattern::Flick:  return "FLICK IT";
       default: return "";
     }
   }

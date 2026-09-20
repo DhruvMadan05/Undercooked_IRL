@@ -38,13 +38,11 @@ Rgb patternColor(uint8_t pattern) {
     case (uint8_t)oc::Pattern::Zigzag: return {255, 255, 0};   // yellow
     case (uint8_t)oc::Pattern::Hold:   return {160, 0, 255};   // purple
     case (uint8_t)oc::Pattern::Shake:  return {255, 0, 150};   // pink
-    case (uint8_t)oc::Pattern::Press:  return {255, 255, 255}; // white
-    case (uint8_t)oc::Pattern::Flick:  return {0, 255, 255};   // cyan
     default:                           return {0, 0, 0};
   }
 }
 
-constexpr uint8_t kPatternCount = 6;
+constexpr uint8_t kPatternCount = 4;
 
 } // namespace
 

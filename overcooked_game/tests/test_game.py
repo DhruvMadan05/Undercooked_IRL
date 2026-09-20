@@ -168,7 +168,7 @@ def test_pan_cue_shows_the_gesture_and_blinks_when_time_is_short(h):
     assert h.game._desired_display(h.game.stations[PAN]) == (p.DisplayMode.PATTERN_CUE, asked)
 
     h.advance(17)  # 3 of 20 s left: under the 20% mark
-    assert h.game._desired_display(h.game.stations[PAN]) == (p.DisplayMode.PATTERN_CUE, asked + 6)
+    assert h.game._desired_display(h.game.stations[PAN]) == (p.DisplayMode.PATTERN_CUE, asked + 4)
 
 
 def test_pan_burns_when_time_runs_out(h):

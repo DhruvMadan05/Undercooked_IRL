@@ -32,7 +32,7 @@ sink = 1
 #   cutting_board = { goal = presses }               raw -> chopped
 #   pan           = { goal = gestures, seconds = t, bonus_s = t, bonus_cap_s = t, patterns = [".."] }
 #                   raw -> cooked. Simon Says: the pan asks for one random joystick gesture at a
-#                   time (from patterns, default all: circle zigzag hold shake press flick); every
+#                   time (from patterns, default all: circle zigzag hold shake); every
 #                   correct one gives back bonus_s x chain length (up to bonus_cap_s) of the
 #                   seconds budget. Burnt if goal gestures are not done in time.
 #   deep_fryer    = { goal = N }                     raw -> cooked (hand-height tracking minigame)

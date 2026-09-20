@@ -23,7 +23,7 @@ what they are told, the bridge is a dumb relay. Reset = one function call.
 | `shared/TagReader/` | `PresenceTracker` (pure logic, native-tested) + `PresenceReader` (RC522, WUPA polling) |
 | `shared/StationCore/` | `Display` (LEDs), `Session` (Hello/Welcome/heartbeat), `Station` (glue), `StationTask` interface, `StandardWiring.h` (pin map), `StandardStation.h` (one-object station) |
 | `overcooked_cutting_board/` | Station: `PressTask` counts limit-switch presses (GPIO14). Also has the `native` unit-test env |
-| `overcooked_pan/` | Station: `JoystickPatternTask` (analog X/Y GPIO34/35, click GPIO14), pure `PatternTracker` (circle / zigzag / hold / shake / press / flick), native tests. The Simon Says rules (random gesture per step, time bonus, burn) are server-side in `kinds.SimonPan` |
+| `overcooked_pan/` | Station: `JoystickPatternTask` (analog X/Y GPIO34/35), pure `PatternTracker` (circle / zigzag / hold / shake), native tests, and `PatternOled` (SSD1306 128x64 on I2C SDA GPIO21 / SCL GPIO22: the gesture icon, time bar, BURNT!). The Simon Says rules (random gesture per step, time bonus, burn) are server-side in `kinds.SimonPan` |
 | `deep_fryer_station/` | Station: `FryTask` (HC-SR04 hand height GPIO4/35, SSD1306 OLED I2C GPIO21/22), pure `fryer::ProgressTracker`/`overlaps()` (target overlap + fill/drain scoring), native tests |
 | `sink_station/` | Station: `ScrubTask` (analog joystick GPIO34/35, same pins as the pan), pure `scrub::ScrubTracker` (counts milliseconds of active circling), native tests |
 | `overcooked_reader_station/` | Plate / delivery: same firmware, env picks the `StationKind` (`-e plate|delivery`, one at a time) |
@@ -40,7 +40,7 @@ what they are told, the bridge is a dumb relay. Reset = one function call.
   `Welcome, Accept(task, goal, progress, param), Reject, SetDisplay(mode, level)` (server -> station).
   An `Accept` for the tag already running a task re-targets it (new param/goal, count never goes back):
   this is how the pan's Simon Says changes the asked-for gesture after every step. `SetDisplay(PatternCue,
-  pattern id)` fills the strip in that gesture's colour (`Display.cpp` `patternColor`); +6 makes it blink.
+  pattern id)` fills the strip in that gesture's colour (`Display.cpp` `patternColor`); +4 makes it blink.
 - Station link: broadcasts `Hello` until `Welcome`, then unicasts to the bridge MAC with a 1 Hz `Heartbeat`;
   3.5 s of silence -> back to `Hello` (station shows a slow red blink). A `Welcome` while already connected
   means the server restarted, so the station re-announces the tag on it. The server sends `Welcome` on the first
