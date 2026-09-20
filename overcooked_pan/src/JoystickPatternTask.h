@@ -13,6 +13,8 @@
 
 static_assert((uint8_t)oc::Pattern::Circle == pan::kCircle, "pattern ids out of step with OvercookedComm.h");
 static_assert((uint8_t)oc::Pattern::Zigzag == pan::kZigzag, "pattern ids out of step with OvercookedComm.h");
+static_assert((uint8_t)oc::Pattern::Hold == pan::kHold, "pattern ids out of step with OvercookedComm.h");
+static_assert((uint8_t)oc::Pattern::Shake == pan::kShake, "pattern ids out of step with OvercookedComm.h");
 
 class JoystickPatternTask : public station::StationTask {
  public:
@@ -50,7 +52,7 @@ class JoystickPatternTask : public station::StationTask {
 
   void stop() override { active_ = false; }
 
-  void update(uint32_t) override {
+  void update(uint32_t now) override {
     // A light low-pass filter so ADC noise does not flicker across a direction boundary.
     smoothX_ += 0.3f * (analogRead(xPin_) - smoothX_);
     smoothY_ += 0.3f * (analogRead(yPin_) - smoothY_);
@@ -58,7 +60,7 @@ class JoystickPatternTask : public station::StationTask {
 
     float x = normalise(smoothX_, centerX_, invertX_);
     float y = normalise(smoothY_, centerY_, invertY_);
-    if (tracker_.update(pan::quantize(x, y, deadZone_))) {
+    if (tracker_.update(pan::quantize(x, y, deadZone_), now)) {
       count_++;
       Serial.printf("Pattern step %u/%u\n", count_, goal_);
     }

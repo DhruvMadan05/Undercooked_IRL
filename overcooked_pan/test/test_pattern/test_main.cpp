@@ -11,10 +11,16 @@ static const Direction U = Direction::Up, R = Direction::Right, D = Direction::D
 void setUp() {}
 void tearDown() {}
 
-// Feeds a sequence and returns how many steps it counted.
-static int steps(PatternTracker &t, std::initializer_list<Direction> moves) {
+// Feeds a sequence and returns how many steps it counted. stepMs advances a
+// fake clock between readings; Circle/Zigzag ignore it, Hold/Shake tests that
+// need exact timing call t.update() directly instead.
+static int steps(PatternTracker &t, std::initializer_list<Direction> moves, uint32_t stepMs = 10) {
+  uint32_t now = 0;
   int n = 0;
-  for (Direction d : moves) n += t.update(d);
+  for (Direction d : moves) {
+    now += stepMs;
+    n += t.update(d, now);
+  }
   return n;
 }
 
@@ -81,6 +87,82 @@ void test_zigzag_starts_on_either_side() {
   TEST_ASSERT_EQUAL(0, steps(t, {U}));
 }
 
+void test_hold_counts_after_dwell() {
+  PatternTracker t;
+  t.reset(kHold);
+  TEST_ASSERT_EQUAL(0, t.update(N, 100));
+  TEST_ASSERT_EQUAL(0, t.update(N, 400)); // 300ms in, short of the 500ms step
+  TEST_ASSERT_EQUAL(1, t.update(N, 650)); // 550ms since first centered
+}
+
+void test_hold_repeats_without_releasing() {
+  PatternTracker t;
+  t.reset(kHold);
+  t.update(N, 0);
+  TEST_ASSERT_EQUAL(1, t.update(N, 500));
+  TEST_ASSERT_EQUAL(0, t.update(N, 800));
+  TEST_ASSERT_EQUAL(1, t.update(N, 1000)); // another full 500ms since the last step
+}
+
+void test_hold_resets_on_movement() {
+  PatternTracker t;
+  t.reset(kHold);
+  t.update(N, 0);
+  t.update(U, 300);                        // leaves center, dwell aborted
+  TEST_ASSERT_EQUAL(0, t.update(N, 600));  // re-centered, dwell restarts here
+  TEST_ASSERT_EQUAL(1, t.update(N, 1100)); // 500ms after re-centering at 600
+}
+
+void test_hold_reset_forgets_dwell() {
+  PatternTracker t;
+  t.reset(kHold);
+  t.update(N, 0);
+  t.update(N, 400);
+  t.reset(kHold);
+  TEST_ASSERT_EQUAL(0, t.update(N, 450)); // dwell restarted by reset
+  TEST_ASSERT_EQUAL(1, t.update(N, 950));
+}
+
+void test_shake_counts_fast_alternation() {
+  PatternTracker t;
+  t.reset(kShake);
+  TEST_ASSERT_EQUAL(0, t.update(L, 0)); // first edge: nothing to alternate from yet
+  TEST_ASSERT_EQUAL(1, t.update(R, 150));
+  TEST_ASSERT_EQUAL(1, t.update(L, 300));
+  TEST_ASSERT_EQUAL(1, t.update(R, 450));
+}
+
+void test_shake_ignores_slow_alternation() {
+  PatternTracker t;
+  t.reset(kShake);
+  t.update(L, 0);
+  TEST_ASSERT_EQUAL(0, t.update(R, 900)); // gap too long (> 400ms window)
+  TEST_ASSERT_EQUAL(1, t.update(L, 950)); // but back to fast from here
+}
+
+void test_shake_works_on_either_axis() {
+  PatternTracker t;
+  t.reset(kShake);
+  t.update(U, 0);
+  TEST_ASSERT_EQUAL(1, t.update(D, 100));
+}
+
+void test_shake_ignores_non_opposite_edges() {
+  PatternTracker t;
+  t.reset(kShake);
+  t.update(U, 0);
+  TEST_ASSERT_EQUAL(0, t.update(R, 100)); // adjacent, not opposite - not a shake
+}
+
+void test_shake_reset_forgets_last_direction() {
+  PatternTracker t;
+  t.reset(kShake);
+  t.update(L, 0);
+  t.update(R, 100);
+  t.reset(kShake);
+  TEST_ASSERT_EQUAL(0, t.update(L, 150)); // no prior direction after reset
+}
+
 int main() {
   UNITY_BEGIN();
   RUN_TEST(test_quantize);
@@ -91,5 +173,14 @@ int main() {
   RUN_TEST(test_circle_reset_forgets_direction);
   RUN_TEST(test_zigzag);
   RUN_TEST(test_zigzag_starts_on_either_side);
+  RUN_TEST(test_hold_counts_after_dwell);
+  RUN_TEST(test_hold_repeats_without_releasing);
+  RUN_TEST(test_hold_resets_on_movement);
+  RUN_TEST(test_hold_reset_forgets_dwell);
+  RUN_TEST(test_shake_counts_fast_alternation);
+  RUN_TEST(test_shake_ignores_slow_alternation);
+  RUN_TEST(test_shake_works_on_either_axis);
+  RUN_TEST(test_shake_ignores_non_opposite_edges);
+  RUN_TEST(test_shake_reset_forgets_last_direction);
   return UNITY_END();
 }
