@@ -11,6 +11,8 @@ laptop runs the game and shows the scoreboard.
 | Folder | What |
 |---|---|
 | `overcooked_cutting_board/` | Cutting board station firmware (counts limit-switch presses) |
+| `overcooked_pan/` | Frying pan station firmware (joystick moved in a circle / zigzag pattern) |
+| `overcooked_reader_station/` | Pot, plate and delivery stations: reader + LEDs only, one project with an environment per kind. A plate station is the plate itself (food goes on it); each plate also has a tag, touched to the delivery station to serve |
 | `overcooked_server/` | Bridge firmware: ESP-NOW <-> USB serial, plus its own RC522 for calibration |
 | `shared/OvercookedComm/` | ESP-NOW protocol (typed messages, acks, retries) |
 | `shared/TagReader/` | RC522 wrapper with tag placed / removed detection |
@@ -35,20 +37,26 @@ The page has a simulator panel: virtual stations you can place tags on, and an
 ## Run with the real bridge
 
 1. Flash `overcooked_server` to the bridge ESP32 and each station firmware to its ESP32
-   (`pio run -t upload` in each folder).
+   (`pio run -t upload` in each folder; in `overcooked_reader_station` pick the kind with
+   `-e pot`, `-e plate` or `-e delivery`).
 2. `python -m overcooked --list-ports`, then `python -m overcooked --port /dev/cu.usbserial-XXXX`.
 3. Open the page. Stations show up as they power on (green dot = heard within 3.5 s).
 
-The bridge needs an RC522 wired like the cutting board:
-SDA→GPIO32, SCK→GPIO33, MOSI→GPIO25, MISO→GPIO26, RST→GPIO27, GND→GND, 3.3V→3V3.
+Every station and the bridge use the same RC522 and LED strip wiring, documented in
+`shared/StationCore/src/StandardWiring.h`
+(RC522: SDA→GPIO32, SCK→GPIO33, MOSI→GPIO25, MISO→GPIO26, RST→GPIO27, GND→GND, 3.3V→3V3; LEDs: DIN→GPIO13).
+Extra inputs: cutting board limit switch on GPIO14 (`overcooked_cutting_board/src/main.cpp`), pan joystick
+X→GPIO34, Y→GPIO35, powered from 3V3 (`overcooked_pan/src/main.cpp`; these pins are my first guess, change
+them to match your build).
 
 ## Calibration (start of every game, or "Load last calibration")
 
 1. Touch any tag to the **bridge's reader**: it becomes the calibration tag.
 2. Touch that tag to **each station**. Each flashes green and is named
    ("Cutting board 1", "2", ... in touch order).
-3. The page asks for each food and plate in turn: touch a tag to the bridge's reader to
-   say "this one is a tomato". A tag can only be enrolled once.
+3. The page asks for each food in turn: touch a tag to the bridge's reader to say "this one is a
+   tomato". Then it asks for each plate's tag ("Plate 1 tag"): that pairs the tag with that plate reader.
+   A tag can only be enrolled once.
 
 The result is saved to `overcooked_game/calibration.json`.
 
@@ -61,7 +69,8 @@ recipes in it are placeholders.
 
 Rules worth knowing: progress stays on the server, so food can be picked up and put back,
 even on another station of the same kind; cooking in a pot is timed and burns if left in;
-scan a plate at the plate station, then scan food to add it; delivered food comes back
+a plate reader *is* a plate: put food on it whenever and it goes onto that plate, and touching that
+plate's own tag to the delivery station serves what is on it; delivered food comes back
 as raw after a few seconds; loose food put on the delivery station is thrown away
 (the way to recycle burnt food).
 
@@ -77,29 +86,29 @@ laptop -> bridge   TX <mac|*> <type> <R|U> <hex> | PING | INFO       (R = acked 
 Message types and payload layouts are in `shared/OvercookedComm/src/OvercookedComm.h`, mirrored in
 `overcooked_game/overcooked/protocol.py`; `tests/test_protocol.py` fails if the two drift apart.
 
-## Adding a station type (e.g. the pan)
+## Adding a station type
 
-Firmware, a new PlatformIO project next to `overcooked_cutting_board` (copy its `platformio.ini`):
-1. Subclass `station::StationTask` (see `overcooked_cutting_board/src/PressTask.h`) for the station's
-   input: joystick pattern, stirring, ... For a station with no input, pass no task.
-2. `main.cpp`: build the reader, LED strip and task, construct `station::Station` with the right
-   `oc::StationKind`, call `begin()` and `update(millis())`.
+Firmware: a new PlatformIO project next to `overcooked_pan` (copy its `platformio.ini`).
+1. Subclass `station::StationTask` (see `overcooked_cutting_board/src/PressTask.h` or
+   `overcooked_pan/src/JoystickPatternTask.h`) for the station's input. For a station with no
+   input, pass no task (see `overcooked_reader_station`).
+2. `main.cpp`: build a `station::StandardStation` with the right `oc::StationKind` and the task;
+   call `begin()` in `setup()` and `update(millis())` in `loop()`.
 
 Server (`overcooked_game/overcooked/`):
-1. `kinds.py`: the pan already exists (`TaskStation`, joystick pattern, `Accept.param` = pattern id from
-   `PATTERN_IDS` in `config.py`; keep those ids in step with the firmware). A brand new kind needs a
-   `StationKind` in both `OvercookedComm.h` and `protocol.py`, and a `Behavior` in `BEHAVIORS`.
+1. A brand new kind needs a `StationKind` in both `OvercookedComm.h` and `protocol.py`, and a
+   `Behavior` in `kinds.py` (`BEHAVIORS`). A new joystick pattern needs an `oc::Pattern` value in
+   `OvercookedComm.h` and the same id in `PATTERN_IDS` in `config.py` (a test checks they match), plus
+   the movement itself in `overcooked_pan/src/PatternTracker.h`.
 2. `level.toml`: add the station to `[stations]` and its work to the ingredients.
-
-The pan, pot, plate and delivery *firmware* is not written yet; the server side of all of them is, and is
-covered by the simulator and tests.
 
 ## Tests
 
 ```sh
 cd overcooked_game && .venv/bin/pytest                  # protocol, calibration, gameplay, simulator, web
 cd overcooked_cutting_board && pio test -e native       # tag presence logic
-pio run                                                 # in overcooked_cutting_board and overcooked_server
+cd overcooked_pan && pio test -e native                 # joystick pattern logic
+pio run                                                 # in each firmware folder
 ```
 
 ## Known limits
@@ -107,5 +116,7 @@ pio run                                                 # in overcooked_cutting_
 - One tag per station at a time.
 - Tag removal is detected after ~300 ms of misses (`PresenceReader`: 100 ms poll x 3). It needs tuning on
   real tags and the real RC522 wiring, which was not testable here.
+- The pan's joystick reading (dead zone 0.6, low-pass filter) and the pattern logic are unit tested, but the
+  feel of it is not: expect to tune `JOY_DEAD_ZONE` / `INVERT_X` / `INVERT_Y` and the goal in `level.toml`.
 - Stations must be within ESP-NOW range of the bridge; a station that loses the bridge shows a slowly
   blinking red pixel and reconnects by itself.

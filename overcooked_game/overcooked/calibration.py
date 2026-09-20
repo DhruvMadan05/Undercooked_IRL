@@ -25,14 +25,19 @@ class Slot:
 
 @dataclass
 class FoodStep:
-    """One thing to enrol: N tags of an ingredient, or of plates."""
+    """One thing to enrol: N tags of an ingredient, or the tag of one plate."""
     name: str  # ingredient name or "plate"
     total: int
+    plate_index: int | None = None  # set for a plate: which plate reader it belongs to
     uids: list[bytes] = field(default_factory=list)
 
     @property
     def done(self) -> bool:
         return len(self.uids) >= self.total
+
+    @property
+    def label(self) -> str:
+        return self.name if self.plate_index is None else f"{slot_name('plate', self.plate_index)} tag"
 
 
 class Checklist:
@@ -41,13 +46,16 @@ class Checklist:
             Slot(kind, i) for kind, count in level.stations.items() for i in range(count)
         ]
         self.steps = [FoodStep(name, ing.count) for name, ing in level.ingredients.items()]
-        if level.plates:
-            self.steps.append(FoodStep("plate", level.plates))
+        # One tag per plate reader, in the order the readers were calibrated.
+        self.steps += [FoodStep("plate", 1, plate_index=i) for i in range(level.plates)]
         self.step_index = 0
 
     # stations
     def slot_of(self, mac: str) -> Slot | None:
         return next((s for s in self.slots if s.mac == mac), None)
+
+    def slot_for(self, kind: str, index: int) -> Slot | None:
+        return next((s for s in self.slots if s.kind == kind and s.index == index), None)
 
     def free_slot(self, kind: str) -> Slot | None:
         return next((s for s in self.slots if s.kind == kind and s.mac is None), None)
@@ -74,7 +82,8 @@ class Checklist:
         return {
             "slots": [{"kind": s.kind, "index": s.index, "mac": s.mac, "unassigned": s.mac is None} for s in self.slots],
             "steps": [
-                {"name": st.name, "total": st.total, "count": len(st.uids), "current": i == self.step_index}
+                {"name": st.name, "label": st.label, "total": st.total, "count": len(st.uids),
+                 "current": i == self.step_index}
                 for i, st in enumerate(self.steps)
             ],
         }
@@ -86,12 +95,14 @@ def slot_name(kind: str, index: int) -> str:
 
 # ---- Saved calibration ----------------------------------------------------------
 
-def save(path: Path, master: bytes, stations: dict[str, tuple[StationKind, str]], items: dict[bytes, str | None]) -> None:
-    """stations: mac -> (kind, name). items: uid -> ingredient name (None for a plate)."""
+def save(path: Path, master: bytes, stations: dict[str, tuple[StationKind, str]],
+         items: dict[bytes, tuple[str | None, str | None]]) -> None:
+    """stations: mac -> (kind, name). items: uid -> (ingredient name or None for a plate,
+    the plate reader's mac for a plate)."""
     data = {
         "master": master.hex(),
         "stations": [{"mac": mac, "kind": KIND_NAMES[kind], "name": name} for mac, (kind, name) in stations.items()],
-        "items": [{"uid": uid.hex(), "ingredient": ing} for uid, ing in items.items()],
+        "items": [{"uid": uid.hex(), "ingredient": ing, "station": home} for uid, (ing, home) in items.items()],
     }
     path.write_text(json.dumps(data, indent=2))
 
@@ -103,7 +114,7 @@ def load(path: Path) -> dict | None:
         return {
             "master": bytes.fromhex(data["master"]),
             "stations": [(s["mac"], s["kind"], s["name"]) for s in data["stations"]],
-            "items": [(bytes.fromhex(i["uid"]), i["ingredient"]) for i in data["items"]],
+            "items": [(bytes.fromhex(i["uid"]), i["ingredient"], i.get("station")) for i in data["items"]],
         }
     except (OSError, ValueError, KeyError, TypeError):
         return None

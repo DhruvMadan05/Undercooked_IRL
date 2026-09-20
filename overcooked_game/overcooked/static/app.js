@@ -130,11 +130,11 @@ function renderCalibration(s, cal) {
     const current = c.steps.find((x) => x.current);
     const checks = c.steps.map((st) => `
       <div class="check ${st.count >= st.total ? "done" : ""} ${st.current ? "now" : ""}">
-        ${st.count >= st.total ? "✓" : "○"} ${esc(st.name)} <span class="mac">${st.count}/${st.total}</span></div>`).join("");
-    body = `<div class="prompt">Touch ${current ? `<b>${esc(current.name)}</b> ${current.count + 1}/${current.total}` : "a tag"} to the server reader</div>
+        ${st.count >= st.total ? "✓" : "○"} ${esc(st.label)} <span class="mac">${st.count}/${st.total}</span></div>`).join("");
+    body = `<div class="prompt">Touch ${current ? `<b>${esc(current.label)}</b>${current.total > 1 ? ` ${current.count + 1}/${current.total}` : ""}` : "a tag"} to the server reader</div>
       <div class="checks">${checks}</div>
       <div class="row">
-        <button class="ghost" data-action="next">Skip ${current ? esc(current.name) : ""}</button>
+        <button class="ghost" data-action="next">Skip ${current ? esc(current.label) : ""}</button>
         <button data-action="finish_calibration">Done enrolling</button>
       </div>`;
   }

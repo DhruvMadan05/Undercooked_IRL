@@ -15,8 +15,6 @@ def chop(h, uid=TOMATO1):
 def make_sandwich_plate(h):
     chop(h)
     h.remove(CUT, TOMATO1)
-    h.place(PLT, PLATE)
-    h.remove(PLT, PLATE)
     h.place(PLT, TOMATO1)
     h.remove(PLT, TOMATO1)
     h.place(PLT, BUN)
@@ -214,12 +212,28 @@ def test_cooked_food_does_not_go_back_in_the_pot(h):
 
 # ---- plate + delivery ------------------------------------------------------------------------
 
-def test_food_needs_a_plate_first(h):
+def test_food_goes_on_the_plate_with_no_plate_scan(h):
     h.start_round()
     h.clear()
     h.place(PLT, BUN)
-    assert h.last(PLT, p.Reject) is not None
-    assert h.item(BUN).state == ItemState.RAW
+    assert isinstance(h.last(PLT, p.Accept), p.Accept)
+    assert [e.key for e in h.item(PLATE).contents] == ["bun:raw"]
+    assert h.item(BUN).state == ItemState.CONSUMED
+
+
+def test_plate_tag_is_not_scanned_at_the_plate_reader(h):
+    h.start_round()
+    h.clear()
+    h.place(PLT, PLATE)
+    assert h.last(PLT, p.Reject).uid == PLATE
+    assert h.last(PLT, p.Accept) is None
+
+
+def test_plate_reader_shows_what_is_on_the_plate(h):
+    h.start_round()
+    h.place(PLT, BUN)
+    tile = next(s for s in h.game.snapshot()["stations"] if s["mac"] == PLT)
+    assert tile["note"] == "on the plate: bun:raw"
 
 
 def test_assembly_and_delivery_scores_an_order(h):
@@ -273,8 +287,6 @@ def test_burnt_food_cannot_be_plated_but_can_be_trashed(h):
     assert h.item(RICE).state == ItemState.BURNT
     h.remove(POT, RICE)
 
-    h.place(PLT, PLATE)
-    h.remove(PLT, PLATE)
     h.clear()
     h.place(PLT, RICE)
     assert h.last(PLT, p.Reject) is not None
@@ -288,8 +300,6 @@ def test_burnt_food_cannot_be_plated_but_can_be_trashed(h):
 
 def test_plate_capacity(h):
     h.start_round()
-    h.place(PLT, PLATE)
-    h.remove(PLT, PLATE)
     h.place(CUT, TOMATO1); h.done(CUT, TOMATO1); h.remove(CUT, TOMATO1)
     h.place(CUT, TOMATO2); h.done(CUT, TOMATO2); h.remove(CUT, TOMATO2)
     for uid in (TOMATO1, TOMATO2, BUN):

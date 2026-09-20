@@ -15,16 +15,15 @@ plate_capacity = 4      # ingredients that fit on one plate
 
 # How many of each station the level needs. The calibration wizard asks you to
 # touch the calibration tag to each of them.
+# A plate reader IS a plate: food put on it goes onto that plate, no scan step.
+# Each plate has its own tag, which is touched to the delivery station to serve
+# what is on the plate reader (the wizard pairs each tag with its reader).
 [stations]
 cutting_board = 2
 pan = 1
 pot = 1
-plate = 1
+plate = 2
 delivery = 1
-
-# Plate tags (physical plates).
-[plates]
-count = 2
 
 # Ingredients: how many tags to enrol, and which stations can process them.
 #   cutting_board = { goal = presses }               raw -> chopped

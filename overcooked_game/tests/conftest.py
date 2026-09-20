@@ -33,9 +33,6 @@ pot = 1
 plate = 1
 delivery = 1
 
-[plates]
-count = 1
-
 [ingredient.tomato]
 count = 2
 cutting_board = { goal = 5 }

@@ -81,6 +81,12 @@ enum class TaskKind : uint8_t {
   JoystickPattern = 2, // move the joystick in a pattern
 };
 
+// Accept.param for TaskKind::JoystickPattern: the stick movement to perform.
+enum class Pattern : uint8_t {
+  Circle = 0, // sweep the stick round the edge, either way
+  Zigzag = 1, // swing it left and right
+};
+
 // What the LEDs show when no task is drawing its own progress.
 enum class DisplayMode : uint8_t {
   Idle = 0,

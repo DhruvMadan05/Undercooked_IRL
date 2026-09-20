@@ -139,3 +139,70 @@ def test_recalibrate_clears_everything(h):
     assert h.game.phase == Phase.CAL_MASTER
     assert not h.game.items and h.game.master is None
     assert h.game.stations[CUT].name is None
+
+
+def make_level(tmp_path, plates):
+    import tomllib
+    from conftest import Harness, LEVEL_TOML
+    from overcooked.config import parse_level
+
+    toml = LEVEL_TOML.replace("plate = 1", f"plate = {plates}")
+    return Harness(parse_level(tomllib.loads(toml)), tmp_path)
+
+
+def test_plate_tag_is_paired_with_its_plate_reader(h):
+    h.calibrate()
+    assert h.item(PLATE).home_mac == PLT
+    assert h.game.plate_for(h.game.stations[PLT]) is h.item(PLATE)
+
+
+def test_each_plate_reader_gets_its_own_plate_in_calibration_order(tmp_path):
+    h = make_level(tmp_path, plates=2)
+    second = "020000000302"
+    plate2 = bytes([0x50, 0x00, 0x00, 0x02])
+    h.station_says(PLT, p.Hello(p.StationKind.PLATE))
+    h.station_says(second, p.Hello(p.StationKind.PLATE))
+    h.bridge_tag(MASTER)
+    h.place(second, MASTER)  # touched first, so it is "Plate 1"
+    h.place(PLT, MASTER)
+    assert h.game.stations[second].name == "Plate 1"
+    h.game.action("next")  # skip the remaining stations
+    while h.game.checklist.current_step.name != "plate":
+        h.game.action("next")  # skip the food, down to the plates
+    labels = [st["label"] for st in h.game.snapshot()["calibration"]["steps"] if st["name"] == "plate"]
+    assert labels == ["Plate 1 tag", "Plate 2 tag"]
+
+    h.bridge_tag(PLATE)
+    h.bridge_tag(plate2)
+    assert h.item(PLATE).home_mac == second
+    assert h.item(plate2).home_mac == PLT
+    assert h.game.phase == Phase.READY
+
+
+def test_plate_tag_needs_its_reader_calibrated_first(tmp_path):
+    h = make_level(tmp_path, plates=1)
+    h.station_says(PLT, p.Hello(p.StationKind.PLATE))
+    h.bridge_tag(MASTER)
+    h.game.action("next")  # skip the stations: the plate reader is not calibrated
+    while h.game.checklist.current_step.name != "plate":
+        h.game.action("next")
+    h.bridge_tag(PLATE)
+    assert PLATE not in h.game.items
+    assert h.game.snapshot()["log"][-1]["kind"] == "warn"
+
+
+def test_plate_pairing_survives_save_and_load(h, level, tmp_path):
+    from conftest import Harness
+
+    h.calibrate()
+    fresh = Harness(level, tmp_path)
+    assert fresh.game.action("load_calibration") is None
+    assert fresh.game.items[PLATE].home_mac == PLT
+
+
+def test_old_plates_section_is_rejected():
+    import pytest
+    from overcooked.config import ConfigError, parse_level
+
+    with pytest.raises(ConfigError, match=r"\[plates\] is gone"):
+        parse_level({"plates": {"count": 2}})

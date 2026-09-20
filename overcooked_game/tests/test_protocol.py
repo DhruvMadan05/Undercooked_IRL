@@ -115,3 +115,9 @@ def test_parse_lines():
 ])
 def test_parse_ignores_noise(line):
     assert parse_line(line) is None
+
+
+def test_joystick_pattern_ids_match_firmware(header):
+    from overcooked.config import PATTERN_IDS
+
+    assert {name.lower(): v for name, v in enum_values(header, "Pattern").items()} == PATTERN_IDS

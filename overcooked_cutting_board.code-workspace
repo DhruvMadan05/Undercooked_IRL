@@ -14,6 +14,14 @@
 		{
 			"name": "shared",
 			"path": "shared"
+		},
+		{
+			"name": "overcooked_pan",
+			"path": "overcooked_pan"
+		},
+		{
+			"name": "overcooked_reader_station",
+			"path": "overcooked_reader_station"
 		}
 	],
 	"settings": {}

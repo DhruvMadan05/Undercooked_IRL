@@ -92,6 +92,10 @@ class Game:
         """One-shot LED effect. Reliable, because there is no refresh for it."""
         self.send(station, p.SetDisplay(mode), reliable=True)
 
+    def plate_for(self, station: Station) -> Item | None:
+        """The plate whose tag is paired with this plate reader."""
+        return next((i for i in self.items.values() if i.is_plate and i.home_mac == station.mac), None)
+
     def match_order(self, plate: Item) -> Order | None:
         key = tuple(sorted(e.key for e in plate.contents))
         matches = [o for o in self.orders if o.needs == key]
@@ -286,9 +290,16 @@ class Game:
             known = self.items[uid]
             self.log(f"Tag {uid.hex()} is already enrolled as {known.label}", "warn")
             return
-        self.items[uid] = Item(uid, None if step.name == "plate" else step.name)
+        home = None
+        if step.plate_index is not None:
+            slot = self.checklist.slot_for("plate", step.plate_index)
+            if slot is None or slot.mac is None:
+                self.log(f"{step.label}: calibrate that plate reader first, or skip it", "warn")
+                return
+            home = slot.mac
+        self.items[uid] = Item(uid, None if step.plate_index is not None else step.name, home_mac=home)
         step.uids.append(uid)
-        self.log(f"Enrolled {step.name} {len(step.uids)}/{step.total} ({uid.hex()})", "ok")
+        self.log(f"Enrolled {step.label} {len(step.uids)}/{step.total} ({uid.hex()})", "ok")
         if step.done:
             self.checklist.advance()
             if self.checklist.food_done:
@@ -303,7 +314,7 @@ class Game:
         if not self.calibration_path or self.master is None:
             return
         stations = {m: (s.kind, s.name) for m, s in self.stations.items() if s.name}
-        items = {uid: it.ingredient for uid, it in self.items.items()}
+        items = {uid: (it.ingredient, it.home_mac) for uid, it in self.items.items()}
         try:
             calibration.save(self.calibration_path, self.master, stations, items)
         except OSError as e:
@@ -320,9 +331,9 @@ class Game:
         self.master = saved["master"]
         self.checklist = calibration.Checklist(self.level)
         self.items = {}
-        for uid, ingredient in saved["items"]:
+        for uid, ingredient, home in saved["items"]:
             if ingredient is None or ingredient in self.level.ingredients:
-                self.items[uid] = Item(uid, ingredient)
+                self.items[uid] = Item(uid, ingredient, home_mac=home)
             else:
                 self.log(f"Saved tag {uid.hex()} is {ingredient}, not in this level: skipped", "warn")
         for mac, kind_name, name in saved["stations"]:

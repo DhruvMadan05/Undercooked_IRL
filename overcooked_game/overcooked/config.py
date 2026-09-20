@@ -63,7 +63,7 @@ class Level:
     respawn_s: float
     plate_capacity: int
     stations: dict[str, int]
-    plates: int
+    plates: int  # = stations["plate"]: each plate reader is one plate with one tag
     ingredients: dict[str, Ingredient]
     recipes: dict[str, Recipe]
 
@@ -98,6 +98,8 @@ def _process(ingredient: str, station: str, raw: dict) -> Process:
 
 def parse_level(data: dict) -> Level:
     lv = data.get("level", {})
+    if "plates" in data:
+        raise ConfigError("[plates] is gone: every plate reader is a plate, set [stations] plate = N")
 
     stations = {name: int(n) for name, n in data.get("stations", {}).items()}
     for name in stations:
@@ -141,7 +143,7 @@ def parse_level(data: dict) -> Level:
         respawn_s=float(lv.get("respawn_s", 3)),
         plate_capacity=int(lv.get("plate_capacity", 4)),
         stations=stations,
-        plates=int(data.get("plates", {}).get("count", 1)),
+        plates=stations.get("plate", 0),
         ingredients=ingredients,
         recipes=recipes,
     )

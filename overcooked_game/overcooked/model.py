@@ -47,6 +47,7 @@ class Item:
     progress_kind: str | None = None  # station kind the progress belongs to
     respawn_at: float | None = None
     contents: list[PlateEntry] = field(default_factory=list)  # plates only
+    home_mac: str | None = None  # plates only: the plate reader (station) this tag belongs to
 
     @property
     def is_plate(self) -> bool:

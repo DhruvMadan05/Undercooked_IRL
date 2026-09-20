@@ -172,23 +172,19 @@ class Pot(Behavior):
 
 
 class PlateStation(Behavior):
-    """Assembly: scan a plate, then scan food to put it on that plate. The
-    plate stays "current" until another plate is scanned."""
+    """A plate reader IS a plate: any food put on it goes onto that plate, at any
+    time. The plate's own tag is touched to the delivery station to serve it."""
 
     kind = StationKind.PLATE
     name = "plate"
 
     def on_placed(self, game, station, item):
         if item.is_plate:
-            station.data["plate"] = item.uid
-            game.accept(station, item)
-            game.flash(station, DisplayMode.CALIBRATED)
-            game.log(f"{station.label}: plate {item.uid.hex()[:4]} ready ({len(item.contents)} on it)")
+            game.reject(station, item, "plate tags are touched to the delivery station")
             return
-
-        plate = game.items.get(station.data.get("plate"))
+        plate = game.plate_for(station)
         if plate is None:
-            game.reject(station, item, "scan a plate first")
+            game.reject(station, item, "no plate tag is paired with this reader, recalibrate")
         elif len(plate.contents) >= game.level.plate_capacity:
             game.reject(station, item, "plate is full")
         elif item.state == ItemState.BURNT:
@@ -201,14 +197,15 @@ class PlateStation(Behavior):
             game.log(f"{station.label}: {item.label} added to the plate", "ok")
 
     def describe(self, game, station):
-        plate = game.items.get(station.data.get("plate"))
+        plate = game.plate_for(station)
         if not plate:
             return {}
-        return {"note": "plate: " + (", ".join(e.key for e in plate.contents) or "empty")}
+        return {"note": "on the plate: " + (", ".join(e.key for e in plate.contents) or "nothing")}
 
 
 class Delivery(Behavior):
-    """Hand in a finished plate. Any loose food placed here is thrown away
+    """Serve a plate: touch its tag here and everything on its plate reader is
+    handed in. Any loose food placed here is thrown away
     (it comes back as RAW after respawn_s), which is how burnt food is recycled."""
 
     kind = StationKind.DELIVERY
