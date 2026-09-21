@@ -1,0 +1,54 @@
+UNDERCOOKED - PRESENTATION SCRIPT (about 4 minutes)
+Team 2b2y, SASE Hack 2026
+Bracketed cues show which slide to be on. One section per slide. Pace is roughly 150 words a minute.
+
+[Slide 1 - Title]
+Hi everyone, we're Team 2b2y, and this is Undercooked, a low-cost team-building game we built for SASE Hack 2026.
+
+[Slide 2 - Team]
+That's Ryan Ranjitkar, Luhai Tang, and Dhruv Madan. Together we built the whole thing, from the hardware to the scoreboard.
+
+[Slide 3 - Why we built this]
+Overcooked is one of the best co-op games ever made, but it's still just a screen. Everyone crowds around a TV, mashing buttons and yelling at pixels. We wanted the yelling to be about a real frying pan.
+
+[Slide 4 - Who it's for]
+And that's what makes it great for team building. Nobody can cook an order alone, so players have to talk, split up jobs, and cover for each other. in addition Team-building activities are usually expensive, or need a venue, so we made ours cheap and easy to set up. It's built for clubs, classes, and team events.
+
+[Slide 5 - The concept]
+Undercooked turns Overcooked into a physical game, with up to eight cooking stations and cheap RFID tags standing in for the ingredients. It's the same chaos as the video game, except you're the one holding a frying pan instead of a joystick
+
+[Slide 6 - How it plays]
+Each round starts with orders that have a deadline. You press a real switch to chop, waggle a joystick to fry, scrub dishes in a sink, and tap RFID tags to plate and deliver. all while A laptop keeps score on a browser anyone can open.
+
+[Slide 7 - Architecture]
+Under the hood, each station is an ESP32 that just reports what happens. A bridge relays it over USB serial to a Python game server, which pushes the live scoreboard to any browser.
+
+[Slide 8 - Core principle]
+The key idea: all game state lives on the laptop. The tags, stations, and bridge are all dumb, so it's easy to test, and resetting the game is one function call.
+
+[Slide 9 - The hardware]
+Every station is built the same way: an ESP32, an RFID reader, LEDs, and one input, like a limit switch or a joystick. Up to eight stations share one bridge.
+
+[Slide 10 - What it costs]
+Here's the best part: it's cheap. An ESP32 is about six dollars, an RFID reader about two, and the tags are fifteen cents each. A full eight-station kitchen comes to about a hundred and thirty dollars in parts, plus a laptop you already own. That's cheap enough for a club or a classroom to build.
+
+[Slide 11 - Meet the stations]
+We built six kinds of stations: cutting board, pan, pot, sink, plate, and delivery. Each one has its own job, from chopping to scrubbing to scoring an order.
+
+[Slide 12 - Tested on real hardware]
+And we tested everything on real hardware. Every station, the bridge, the RFID readers, and the LEDs all work.
+
+[Slide 13 - Protocol]
+Stations talk to the bridge over ESP-NOW, using our own small protocol of acks and retries, so no message gets lost, even if the radio drops a packet.
+
+[Slide 14 - Game server]
+Setup is simple. Touch a tag to each station and each ingredient once, and the game pairs everything for you. Levels and recipes live in one config file, so a new level needs no code.
+
+[Slide 15 - Engineering rigor]
+A test fails the build if the Python and C++ protocols drift apart, and over a hundred automated tests mean the whole game runs even with no boards plugged in.
+
+[Slide 16 - What's next]
+Next, we want more levels, with new kitchens and tougher recipes, and better physical stations, with 3D-printed housings instead of loose breadboards, while keeping the cost low. Longer term, we'd love bigger teams and a table-sized kitchen for team events.
+
+[Slide 17 - Closing]
+We built team building that any club, class, or event can afford. Come give it a try. Thank you, and have fun cooking!

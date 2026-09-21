@@ -1,27 +1,8 @@
-% Undercooked IRL -- Beamer deck
+% Undercooked IRL -- Beamer deck (Team 2b2y, SASE Hack 2026)
 % Compile with: pdflatex undercooked_irl.tex (run twice), xelatex, or
 % `tectonic undercooked_irl.tex`. Requires: tikz (calc, arrows.meta,
 % positioning), tcolorbox (skins, breakable), array, ragged2e, colortbl.
-%
-% SIDE VIDEO STRIP
-% ----------------
-% Every slide reserves a full-height, 9:16 portrait strip on the right
-% edge (like a "subway surfer" background clip) -- see \videostripw /
-% \setbeamertemplate{background} below. All slide content is narrowed to
-% stay clear of it automatically via \setbeamersize{text margin right=...}.
-% A plain PDF can't loop a real video on its own, so to actually play one
-% there at presentation time, pick whichever fits your setup:
-%   1) Live: run the video in a separate always-on-top player window (or
-%      an OBS scene) positioned over that strip while you present the PDF.
-%   2) Baked-in export: render each slide to an image (`pdftoppm`) and
-%      composite it with a looping video clip into one video file per
-%      slide, or the whole deck, using `ffmpeg`'s overlay filter, e.g.
-%        ffmpeg -i slide.png -stream_loop -1 -i clip.mp4 \
-%          -filter_complex "[0][1]overlay=x=W-w:y=0" -shortest out.mp4
-%   3) PDF-native embed (Acrobat/Reader only, not portable): embed with
-%      the `media9` package's \includemedia at the same coordinates as
-%      the strip, sized \videostripw wide by the full slide height.
-\documentclass[aspectratio=169]{beamer}
+\documentclass[aspectratio=169,t]{beamer}
 
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
@@ -40,42 +21,38 @@
 \setlength{\parindent}{0pt}
 \setlength{\parskip}{0pt}
 
-% ---------- Reserved side strip for a looping 9:16 video ----------
-% Slide canvas at aspectratio=169 is 12.8cm x 7.2cm. A strip that runs the
-% full slide height at a 9:16 (portrait) aspect ratio is therefore
-% 7.2 * 9/16 = 4.05cm wide. All slide content is narrowed to leave this
-% clear on the right, like a "subway surfer" side-video layout: drop a
-% real looping clip into that region later (video editor / OBS scene /
-% PDF multimedia embed) -- the deck's own margins already make room for
-% it on every slide, automatically, via the background template below.
-\newlength{\videostripw}
-\setlength{\videostripw}{4.05cm}
-\newlength{\videostripgap}
-\setlength{\videostripgap}{2mm}
-\setbeamersize{text margin left=6mm, text margin right=4.25cm}
+% Slide canvas at aspectratio=169 is 12.8cm x 7.2cm; content uses the full width.
+\setbeamersize{text margin left=8mm, text margin right=8mm}
 
-% ---------- Palette (lifted from the HTML deck) ----------
-\definecolor{bgDark}{RGB}{27,24,21}
-\definecolor{bgCream}{RGB}{251,248,243}
+% ---------- Palette (dark theme: black slides, white text) ----------
+% bgCream / \creamframe keep their names from the original light theme but
+% now paint the same black as bgDark.
+\definecolor{bgDark}{RGB}{10,10,10}
+\definecolor{bgCream}{RGB}{10,10,10}
 \definecolor{bgRust}{RGB}{184,67,31}
-\definecolor{cardWhite}{RGB}{255,255,255}
-\definecolor{cardBorder}{RGB}{231,224,214}
-\definecolor{ink}{RGB}{27,24,21}
+\definecolor{cardWhite}{RGB}{28,28,28}
+\definecolor{cardBorder}{RGB}{72,72,72}
+\definecolor{panel}{RGB}{46,42,38}
+\definecolor{ruleGray}{RGB}{100,100,100}
+\definecolor{ink}{RGB}{255,255,255}
 \definecolor{cream}{RGB}{243,236,226}
 \definecolor{creamMuted}{RGB}{201,189,174}
 \definecolor{orange}{RGB}{232,86,47}
-\definecolor{teal}{RGB}{20,111,104}
-\definecolor{tealBright}{RGB}{31,138,130}
-\definecolor{bodyText}{RGB}{92,83,71}
-\definecolor{mutedText}{RGB}{107,95,82}
-\definecolor{darkText}{RGB}{42,36,30}
-\definecolor{rowShade}{RGB}{247,244,238}
-\definecolor{rustText}{RGB}{184,67,31}
+\definecolor{teal}{RGB}{64,196,184}
+\definecolor{tealBright}{RGB}{44,166,156}
+\definecolor{bodyText}{RGB}{222,222,222}
+\definecolor{mutedText}{RGB}{160,160,160}
+\definecolor{darkText}{RGB}{255,255,255}
+\definecolor{rowShade}{RGB}{34,34,34}
+\definecolor{rustText}{RGB}{240,120,84}
+
+\arrayrulecolor{ruleGray}
 
 \setbeamercolor{background canvas}{bg=bgCream}
 \setbeamercolor{normal text}{fg=darkText}
 \setbeamerfont{normal text}{family=\sffamily}
 \setbeamertemplate{itemize items}[circle]
+\setbeamercolor{itemize item}{fg=orange}
 
 % ---------- Helpers ----------
 \newcommand{\eyebrow}[2]{%
@@ -90,22 +67,22 @@
 \newtcolorbox{whitecard}[1][]{
   colback=cardWhite, colframe=cardBorder, boxrule=0.6pt,
   arc=2.5mm, boxsep=1.2mm, left=3mm, right=3mm, top=1.8mm, bottom=1.8mm,
-  valign=top, breakable, #1
+  valign=top, coltext=white, breakable, before upper={\RaggedRight\hyphenpenalty=10000\exhyphenpenalty=10000}, #1
 }
 \newtcolorbox{darkcard}[1][]{
-  colback=bgDark, colframe=bgDark, boxrule=0pt,
+  colback=panel, colframe=panel, boxrule=0pt,
   arc=2.5mm, boxsep=1.2mm, left=3mm, right=3mm, top=1.8mm, bottom=1.8mm,
-  valign=top, coltext=cream, breakable, #1
+  valign=top, coltext=cream, breakable, before upper={\RaggedRight\hyphenpenalty=10000\exhyphenpenalty=10000}, #1
 }
 \newtcolorbox{rustcard}[1][]{
-  colback=bgRust!12!white, colframe=white!40!bgRust, boxrule=0.8pt,
+  colback=bgRust!25!black, colframe=bgRust, boxrule=0.8pt,
   arc=2.5mm, boxsep=1.2mm, left=3mm, right=3mm, top=1.8mm, bottom=1.8mm,
   valign=top, coltext=white, breakable, #1
 }
 
 \newcommand{\darkframe}{\setbeamercolor{background canvas}{bg=bgDark}}
 \newcommand{\creamframe}{\setbeamercolor{background canvas}{bg=bgCream}}
-\newcommand{\rustframe}{\setbeamercolor{background canvas}{bg=bgRust}}
+\newcommand{\rustframe}{\setbeamercolor{background canvas}{bg=bgDark}}
 
 % Dashed "placeholder" block for media we don't have yet (photo/video/QR).
 % #1 width, #2 height, #3 label text (use \\ for manual line breaks)
@@ -125,30 +102,7 @@
         font=\itshape\fontsize{7}{8.5}\selectfont, text=mutedText]{#2};%
 }
 
-% Persistent 9:16 video-loop panel, drawn on every slide regardless of
-% that slide's own background color. It is a fully opaque "device screen"
-% (not a translucent overlay) so nothing from the slide underneath can
-% ever show through it once a real clip is dropped in.
-\setbeamertemplate{background}{%
-  \begin{tikzpicture}[remember picture, overlay]
-    \coordinate (vTR) at (current page.north east);
-    \coordinate (vBR) at (current page.south east);
-    \coordinate (vTL) at ($(vTR)+(-\videostripw,0)$);
-    \coordinate (vBL) at ($(vBR)+(-\videostripw,0)$);
-    \coordinate (vC) at ($(vTL)!0.5!(vBR)$);
-    \fill[bgDark] (vTL) rectangle (vBR);
-    \fill[orange] (vTL) rectangle ($(vTL)+(\videostripw,-2.5pt)$);
-    \fill[orange] (vBL) rectangle ($(vBL)+(\videostripw,2.5pt)$);
-    \draw[cream, line width=1.1pt] (vC) circle (0.62cm);
-    \fill[cream] ($(vC)+(-0.20cm,-0.28cm)$) -- ($(vC)+(-0.20cm,0.28cm)$) -- ($(vC)+(0.32cm,0)$) -- cycle;
-    \node[font=\bfseries\fontsize{7.5}{9}\selectfont, text=creamMuted, align=center]
-      at ($(vC)+(0,-1.05cm)$) {GAMEPLAY LOOP};
-    \node[font=\fontsize{6.5}{8}\selectfont, text=creamMuted, align=center]
-      at ($(vC)+(0,-1.35cm)$) {9{:}16 $\cdot$ loops continuously};
-  \end{tikzpicture}%
-}
-
-\title{Undercooked IRL}
+\title{Undercooked}
 \author{}
 \date{}
 
@@ -160,70 +114,145 @@
 {
 \darkframe
 \begin{frame}[plain]
+\vspace*{6mm}
 \begin{tikzpicture}[remember picture, overlay]
-  \clip (current page.south west) rectangle ($(current page.north east)+(-\videostripw-\videostripgap,0)$);
-  \fill[orange, opacity=0.14] ([xshift=-1.2cm,yshift=-1.4cm]current page.north east) circle (2.4cm);
+    \fill[orange, opacity=0.14] ([xshift=-1.2cm,yshift=-1.4cm]current page.north east) circle (2.4cm);
   \fill[tealBright, opacity=0.12] ([xshift=-3.2cm,yshift=1.4cm]current page.south east) circle (1.7cm);
 \end{tikzpicture}
-\vspace{10mm}
-\eyebrow{Physical $\cdot$ Co-op $\cdot$ Chaos}{orange}\\[5mm]
-{\color{cream}\fontsize{38}{42}\selectfont\bfseries UNDERCOOKED IRL}\\[5mm]
-\begin{minipage}{0.82\linewidth}
+\eyebrow{A Low-Cost Team-Building Game}{orange}\\[9mm]
+{\color{cream}\fontsize{38}{42}\selectfont\bfseries UNDERCOOKED}\\[7mm]
+\begin{minipage}{0.8\linewidth}
 {\color{creamMuted}\fontsize{13}{18}\selectfont
-Overcooked, rebuilt with real appliances, real RFID tags, and a laptop
-that keeps score.\par}
+Overcooked, rebuilt with real appliances, cheap RFID tags, and a laptop
+that keeps score --- a low-cost team-building game, about \$130 for a full
+kitchen, where the only way to win is to work together.\par}
 \end{minipage}
 \vfill
-\begin{flushleft}
-{\color{creamMuted}\ttfamily\footnotesize undercooked-irl}
-\end{flushleft}
-\vspace{-8mm}
-\hfill{\color{creamMuted}\footnotesize [Team / hackathon name]}
+{\color{cream}\bfseries\fontsize{11}{13}\selectfont Team 2b2y}\hfill
+{\color{creamMuted}\fontsize{11}{13}\selectfont SASE Hack 2026}
 \end{frame}
 }
 
 % ============================================================
-% 2. WHY WE BUILT THIS
+% 2. THE TEAM
 % ============================================================
 {
 \creamframe
 \begin{frame}[plain]
-\vspace{2mm}
+\vspace{5mm}
+\eyebrow{Who We Are}{teal}\\[2mm]
+\slidetitle{The Team}
+
+\vspace{14mm}
+\begin{columns}[t,totalwidth=\linewidth]
+\begin{column}{0.32\textwidth}
+\centering
+\avatarplaceholder[2cm]{PHOTO}\\[3mm]
+{\bfseries\fontsize{11}{13}\selectfont Ryan Ranjitkar}
+\end{column}
+\begin{column}{0.32\textwidth}
+\centering
+\avatarplaceholder[2cm]{PHOTO}\\[3mm]
+{\bfseries\fontsize{11}{13}\selectfont Luhai Tang}
+\end{column}
+\begin{column}{0.32\textwidth}
+\centering
+\avatarplaceholder[2cm]{PHOTO}\\[3mm]
+{\bfseries\fontsize{11}{13}\selectfont Dhruv Madan}
+\end{column}
+\end{columns}
+
+\vspace{8mm}
+\begin{center}
+{\color{mutedText}\fontsize{10}{13}\selectfont Team 2b2y $\cdot$ SASE Hack 2026}
+\end{center}
+\end{frame}
+}
+
+% ============================================================
+% 3. WHY WE BUILT THIS
+% ============================================================
+{
+\creamframe
+\begin{frame}[plain]
+\vspace{5mm}
 \eyebrow{Motivation}{teal}\\[2mm]
 \slidetitle{Why We Built This}
-{\color{bodyText}\fontsize{10.5}{14}\selectfont
+{\color{bodyText}\fontsize{10}{13}\selectfont
 Overcooked is one of the best co-op games ever made --- and it's still just
 a screen. Everyone's crowded around a TV, mashing buttons, yelling at
 pixels. We wanted the yelling to be about a real frying pan.\par}
-\vspace{4mm}
+\vspace{2.5mm}
 
-\begin{whitecard}
-{\bfseries\fontsize{9.5}{11}\selectfont The itch} --- {\color{bodyText}\fontsize{8.5}{11}\selectfont every time we played, someone said ``imagine if this was real.'' Eventually we stopped imagining.}
+\begin{whitecard}[top=1mm,bottom=1mm]
+{\bfseries\fontsize{9.5}{11}\selectfont The itch} --- {\color{bodyText}\fontsize{8.5}{10.5}\selectfont someone always said ``imagine if this was real.'' Eventually we stopped imagining.}
 \end{whitecard}
-\vspace{1.5mm}
-\begin{whitecard}
-{\bfseries\fontsize{9.5}{11}\selectfont The gap} --- {\color{bodyText}\fontsize{8.5}{11}\selectfont no off-the-shelf kit turns a living room into a physical co-op kitchen, so we built the kit ourselves.}
+\vspace{1mm}
+\begin{whitecard}[top=1mm,bottom=1mm]
+{\bfseries\fontsize{9.5}{11}\selectfont The gap} --- {\color{bodyText}\fontsize{8.5}{10.5}\selectfont no affordable kit turns a room into a physical co-op kitchen, so we built one ourselves from about \$130 of parts.}
 \end{whitecard}
-\vspace{1.5mm}
-\begin{whitecard}
-{\bfseries\fontsize{9.5}{11}\selectfont [Your story]} --- {\color{mutedText}\itshape\fontsize{8.5}{11}\selectfont swap this card for your team's actual origin story --- a party, a bet, a class project.}
+\vspace{1mm}
+\begin{whitecard}[top=1mm,bottom=1mm]
+{\bfseries\fontsize{9.5}{11}\selectfont The point} --- {\color{bodyText}\fontsize{8.5}{10.5}\selectfont a team-building game cheap enough for any club or class. Nobody cooks alone: players call out orders, hand off food, and cover for each other.}
 \end{whitecard}
 \end{frame}
 }
 
 % ============================================================
-% 3. THE CONCEPT
+% 4. BENEFITS
 % ============================================================
 {
 \creamframe
 \begin{frame}[plain]
+\vspace{5mm}
+\eyebrow{Who It's For}{teal}\\[2mm]
+\slidetitle{Team Building Anyone Can Run}
+
+\begin{columns}[t,totalwidth=\linewidth]
+\begin{column}{0.48\textwidth}
+\begin{whitecard}[height=2.0cm]
+{\bfseries\fontsize{10}{12}\selectfont Low cost}\\[1mm]
+{\color{bodyText}\fontsize{8.5}{11}\selectfont About \$130 in parts for the whole kitchen, plus a laptop you already own.}
+\end{whitecard}
+\vspace{1.8mm}
+\begin{whitecard}[height=2.0cm]
+{\bfseries\fontsize{10}{12}\selectfont Easy to play}\\[1mm]
+{\color{bodyText}\fontsize{8.5}{11}\selectfont Real controls, nothing to learn: press to chop, waggle to fry, tap a tag to plate.}
+\end{whitecard}
+\end{column}
+\begin{column}{0.48\textwidth}
+\begin{whitecard}[height=2.0cm]
+{\bfseries\fontsize{10}{12}\selectfont Easy to set up}\\[1mm]
+{\color{bodyText}\fontsize{8.5}{11}\selectfont Pair each station with one touch, plug in the bridge, and open the scoreboard on any device.}
+\end{whitecard}
+\vspace{1.8mm}
+\begin{whitecard}[height=2.0cm]
+{\bfseries\fontsize{10}{12}\selectfont Real teamwork}\\[1mm]
+{\color{bodyText}\fontsize{8.5}{11}\selectfont Nobody cooks alone: players talk, split jobs, and cover for each other under a deadline.}
+\end{whitecard}
+\end{column}
+\end{columns}
 \vspace{2mm}
+\begin{darkcard}[top=1.2mm,bottom=1.2mm,valign=center]
+\centering{\color{cream}\bfseries\fontsize{9.5}{11}\selectfont Built for clubs, classes, and team events.}
+\end{darkcard}
+\end{frame}
+}
+
+% ============================================================
+% 5. THE CONCEPT
+% ============================================================
+{
+\creamframe
+\begin{frame}[plain]
+\vspace{5mm}
 \eyebrow{The Concept}{teal}\\[2mm]
-\slidetitle{Overcooked, Played With Real Appliances}
+\slidetitle{Overcooked, But Real}
 {\color{bodyText}\fontsize{10}{13}\selectfont
-Up to eight physical cooking stations, cheap RFID tags standing in for
+Up to eight low-cost cooking stations, cheap RFID tags standing in for
 ingredients, and a laptop that runs the whole game --- the chaos of the
-video game, except you're the one holding the joystick and the frying pan.\par}
+video game, except you're the one holding the joystick and the frying pan,
+and your teammates are standing right next to you.\par}
 \vspace{3mm}
 
 \renewcommand{\arraystretch}{1.15}
@@ -246,41 +275,12 @@ Reset with Ctrl+R & Reset with one button --- the laptop owns every bit of state
 }
 
 % ============================================================
-% 4. SEE IT IN ACTION
+% 6. HOW IT PLAYS
 % ============================================================
 {
 \creamframe
 \begin{frame}[plain]
-\vspace{2mm}
-\eyebrow{Live Demo}{teal}\\[2mm]
-\slidetitle{See It In Action}
-
-\begin{center}
-\mediaplaceholder{2.3cm}{2.9cm}{PHOTO\\[1mm]\normalfont\upshape Full six-station\\table setup}
-\hspace{3mm}
-\mediaplaceholder{2.3cm}{2.9cm}{PHOTO\\[1mm]\normalfont\upshape Inside a station ---\\wiring \& RFID reader}
-\hspace{3mm}
-\mediaplaceholder{2.3cm}{2.9cm}{VIDEO\\[1mm]\normalfont\upshape 30-second\\gameplay clip}
-\end{center}
-
 \vspace{5mm}
-\begin{center}
-\avatarplaceholder[2.1cm]{QR}
-\hspace{4mm}
-\raisebox{1.4cm}{\parbox{7.5cm}{\color{bodyText}\fontsize{9}{12}\selectfont
-Scan for a live gameplay clip.\\
-{\color{mutedText}\itshape [Swap in real photos, a short video, and a QR code linking to it before presenting.]}}}
-\end{center}
-\end{frame}
-}
-
-% ============================================================
-% 5. HOW IT PLAYS
-% ============================================================
-{
-\creamframe
-\begin{frame}[plain]
-\vspace{2mm}
 \eyebrow{How It Plays}{teal}\\[2mm]
 \slidetitle{One Round, Start To Finish}
 
@@ -289,7 +289,7 @@ Scan for a live gameplay clip.\\
   stepnode/.style={circle, fill=orange, text=cream, minimum size=1.1cm, font=\bfseries\large},
   lbl/.style={font=\bfseries\fontsize{8.5}{10}\selectfont, text=ink, align=center, text width=2.6cm},
   sub/.style={font=\fontsize{7}{9}\selectfont, text=mutedText, align=center, text width=2.6cm},
-  arr/.style={-{Stealth[length=2.5mm]}, line width=1.2pt, draw=cardBorder}
+  arr/.style={-{Stealth[length=2.5mm]}, line width=1.2pt, draw=ruleGray}
 ]
 \foreach \i/\name/\lbl/\sub in {
   1/n1/Calibrate once/{Pair every station and tag with one touch},
@@ -318,50 +318,52 @@ where you left off.\par}
 }
 
 % ============================================================
-% 6. SYSTEM ARCHITECTURE
+% 7. SYSTEM ARCHITECTURE
 % ============================================================
 {
 \creamframe
 \begin{frame}[plain]
-\vspace{2mm}
+\vspace{5mm}
 \eyebrow{System Architecture}{teal}\\[2mm]
 \slidetitle{Four Hops, One Source Of Truth}
 
-\begin{center}
+\begin{columns}[c,totalwidth=\linewidth]
+\begin{column}{0.62\textwidth}
 \begin{tikzpicture}[
-  box/.style={draw=cardBorder, fill=white, rounded corners=2mm, align=left,
-              text width=6.6cm, inner sep=2.3mm, font=\fontsize{8}{10}\selectfont},
+  box/.style={draw=cardBorder, fill=cardWhite, rounded corners=2mm, align=left,
+              text width=5.4cm, inner sep=2.3mm, font=\fontsize{8}{10}\selectfont},
   hop/.style={font=\ttfamily\fontsize{6.5}{8}\selectfont, text=mutedText, align=left},
-  arr/.style={-{Stealth[length=2.2mm]}, line width=1.1pt, draw=cardBorder}
+  arr/.style={-{Stealth[length=2.2mm]}, line width=1.1pt, draw=ruleGray}
 ]
 \node[box] (stations) at (0,0)
   {\color{teal}\bfseries\fontsize{6.5}{8}\selectfont STATIONS\quad{\color{ink}\bfseries\fontsize{8.5}{10}\selectfont $\le$8 ESP32 boards}\\
    {\color{mutedText} RFID reader, LEDs, one input each}};
-\node[box, below=6mm of stations] (bridge)
+\node[box, below=5mm of stations] (bridge)
   {\color{teal}\bfseries\fontsize{6.5}{8}\selectfont BRIDGE\quad{\color{ink}\bfseries\fontsize{8.5}{10}\selectfont 1 ESP32, dumb relay}\\
    {\color{mutedText} Own RFID reader, for calibration only}};
-\node[box, below=6mm of bridge] (server)
+\node[box, below=5mm of bridge] (server)
   {\color{teal}\bfseries\fontsize{6.5}{8}\selectfont GAME SERVER\quad{\color{ink}\bfseries\fontsize{8.5}{10}\selectfont Python, on a laptop}\\
    {\color{mutedText} Owns every bit of game state}};
-\node[box, below=6mm of server] (ui)
+\node[box, below=5mm of server] (ui)
   {\color{teal}\bfseries\fontsize{6.5}{8}\selectfont BROWSER UI\quad{\color{ink}\bfseries\fontsize{8.5}{10}\selectfont Any device on Wi-Fi}\\
    {\color{mutedText} Live scoreboard, 10 times a second}};
 \draw[arr] (stations.south) -- node[hop, right, xshift=1mm]{ESP-NOW} (bridge.north);
 \draw[arr] (bridge.south) -- node[hop, right, xshift=1mm]{USB Serial} (server.north);
 \draw[arr] (server.south) -- node[hop, right, xshift=1mm]{WebSocket} (ui.north);
 \end{tikzpicture}
-\end{center}
-
-\vspace{2mm}
-\begin{center}
-{\color{bodyText}\itshape\fontsize{9}{12}\selectfont
-Reset the round with one function call --- every station just draws what it's told.}
-\end{center}
+\end{column}
+\begin{column}{0.38\textwidth}
+\begin{darkcard}
+{\color{orange}\bfseries\fontsize{9}{11}\selectfont One function call}\\[1.5mm]
+{\color{cream}\fontsize{9}{12}\selectfont Reset the round and every station just draws what it's told.}
+\end{darkcard}
+\end{column}
+\end{columns}
 \end{frame}
 }
 
 % ============================================================
-% 7. CORE PRINCIPLE
+% 8. CORE PRINCIPLE
 % ============================================================
 {
 \rustframe
@@ -373,17 +375,17 @@ Reset the round with one function call --- every station just draws what it's to
 \end{center}
 
 \vspace{4mm}
-\begin{tcolorbox}[colback=white!12!bgRust, colframe=white!35!bgRust, boxrule=0.6pt,
+\begin{tcolorbox}[colback=bgRust!30!black, colframe=bgRust, boxrule=0.6pt,
   arc=2mm, valign=center, coltext=white, left=3mm, right=3mm, top=1.8mm, bottom=1.8mm]
 {\bfseries\fontsize{10}{12}\selectfont Tags are dumb} --- {\color{white!90!bgRust}\fontsize{9}{12}\selectfont cheap RFID chips, UID only --- never written to.}
 \end{tcolorbox}
 \vspace{2mm}
-\begin{tcolorbox}[colback=white!12!bgRust, colframe=white!35!bgRust, boxrule=0.6pt,
+\begin{tcolorbox}[colback=bgRust!30!black, colframe=bgRust, boxrule=0.6pt,
   arc=2mm, valign=center, coltext=white, left=3mm, right=3mm, top=1.8mm, bottom=1.8mm]
 {\bfseries\fontsize{10}{12}\selectfont Stations are dumb} --- {\color{white!90!bgRust}\fontsize{9}{12}\selectfont they report events and draw whatever they're told.}
 \end{tcolorbox}
 \vspace{2mm}
-\begin{tcolorbox}[colback=white!12!bgRust, colframe=white!35!bgRust, boxrule=0.6pt,
+\begin{tcolorbox}[colback=bgRust!30!black, colframe=bgRust, boxrule=0.6pt,
   arc=2mm, valign=center, coltext=white, left=3mm, right=3mm, top=1.8mm, bottom=1.8mm]
 {\bfseries\fontsize{10}{12}\selectfont The bridge is dumb} --- {\color{white!90!bgRust}\fontsize{9}{12}\selectfont just a relay between ESP-NOW and USB serial.}
 \end{tcolorbox}
@@ -396,39 +398,36 @@ Reset the round with one function call --- every station just draws what it's to
 }
 
 % ============================================================
-% 8. THE HARDWARE
+% 9. THE HARDWARE
 % ============================================================
 {
 \creamframe
 \begin{frame}[plain]
-\vspace{2mm}
+\vspace{5mm}
 \eyebrow{The Hardware}{teal}\\[2mm]
 \slidetitle{Every Station, The Same Build}
 
 \begin{columns}[t,totalwidth=\linewidth]
-\begin{column}{0.5\textwidth}
-\begin{whitecard}
+\begin{column}{0.24\textwidth}
+\begin{whitecard}[height=2.5cm]
 {\bfseries\fontsize{10}{12}\selectfont ESP32}\\[1mm]
 {\color{mutedText}\fontsize{8}{10}\selectfont WiFi + ESP-NOW radio built in}
 \end{whitecard}
 \end{column}
-\begin{column}{0.5\textwidth}
-\begin{whitecard}
+\begin{column}{0.24\textwidth}
+\begin{whitecard}[height=2.5cm]
 {\bfseries\fontsize{10}{12}\selectfont MFRC522}\\[1mm]
 {\color{mutedText}\fontsize{8}{10}\selectfont Reads a tag's UID over SPI --- never writes}
 \end{whitecard}
 \end{column}
-\end{columns}
-\vspace{2mm}
-\begin{columns}[t,totalwidth=\linewidth]
-\begin{column}{0.5\textwidth}
-\begin{whitecard}
+\begin{column}{0.24\textwidth}
+\begin{whitecard}[height=2.5cm]
 {\bfseries\fontsize{10}{12}\selectfont WS2812B $\times$5}\\[1mm]
 {\color{mutedText}\fontsize{8}{10}\selectfont One wire, addressable status LEDs}
 \end{whitecard}
 \end{column}
-\begin{column}{0.5\textwidth}
-\begin{whitecard}
+\begin{column}{0.24\textwidth}
+\begin{whitecard}[height=2.5cm]
 {\bfseries\fontsize{10}{12}\selectfont + one input}\\[1mm]
 {\color{mutedText}\fontsize{8}{10}\selectfont A limit switch, a joystick, or nothing}
 \end{whitecard}
@@ -437,20 +436,20 @@ Reset the round with one function call --- every station just draws what it's to
 
 \vspace{4mm}
 \begin{columns}[t,totalwidth=\linewidth]
-\begin{column}{0.33\textwidth}
-\begin{darkcard}
+\begin{column}{0.32\textwidth}
+\begin{darkcard}[height=1.9cm,valign=center]
 \centering{\color{orange}\bfseries\fontsize{19}{21}\selectfont $\le$8}\\[1.8mm]
 {\color{creamMuted}\fontsize{8}{10}\selectfont stations sharing one bridge}
 \end{darkcard}
 \end{column}
-\begin{column}{0.33\textwidth}
-\begin{darkcard}
+\begin{column}{0.32\textwidth}
+\begin{darkcard}[height=1.9cm,valign=center]
 \centering{\color{tealBright}\bfseries\fontsize{19}{21}\selectfont 5}\\[1.8mm]
 {\color{creamMuted}\fontsize{8}{10}\selectfont LEDs per station strip}
 \end{darkcard}
 \end{column}
-\begin{column}{0.33\textwidth}
-\begin{darkcard}
+\begin{column}{0.32\textwidth}
+\begin{darkcard}[height=1.9cm,valign=center]
 \centering{\color{orange}\bfseries\fontsize{19}{21}\selectfont 32~B}\\[1.8mm]
 {\color{creamMuted}\fontsize{8}{10}\selectfont max bytes in one ESP-NOW packet}
 \end{darkcard}
@@ -460,14 +459,14 @@ Reset the round with one function call --- every station just draws what it's to
 }
 
 % ============================================================
-% 9. WHAT IT COSTS
+% 10. WHAT IT COSTS
 % ============================================================
 {
 \creamframe
 \begin{frame}[plain]
-\vspace{2mm}
+\vspace{5mm}
 \eyebrow{Budget}{teal}\\[2mm]
-\slidetitle{What It Costs}
+\slidetitle{Team Building On A Budget}
 
 \renewcommand{\arraystretch}{1.3}
 {\setlength{\tabcolsep}{3pt}\fontsize{8}{10}\selectfont
@@ -493,59 +492,60 @@ Wiring, perfboard, case & \textasciitilde\$4 & 9 & Rough per-station estimate \\
 \vspace{4mm}
 \begin{darkcard}
 \centering{\color{orange}\bfseries\fontsize{20}{22}\selectfont \textasciitilde\$130}\\[1.5mm]
-{\color{creamMuted}\fontsize{8.5}{11}\selectfont estimated total build cost for 8 stations + bridge ---
-{\itshape placeholder figure, swap in your real receipts}}
+{\color{creamMuted}\fontsize{8.5}{11}\selectfont a full 8-station team-building kitchen --- cheap enough for any club, class, or event ---
+{\itshape estimate, swap in your real receipts}}
 \end{darkcard}
 \end{frame}
 }
 
 % ============================================================
-% 10. MEET THE STATIONS
+% 11. MEET THE STATIONS
 % ============================================================
 {
 \creamframe
 \begin{frame}[plain]
-\vspace{1mm}
+\vspace{5mm}
 \eyebrow{Meet The Stations}{teal}\\[1.5mm]
 \slidetitle{Six Jobs, One Shared Skeleton}
 
 \begin{columns}[t,totalwidth=\linewidth]
-\begin{column}{0.5\textwidth}
-\begin{whitecard}
+\begin{column}{0.32\textwidth}
+\begin{whitecard}[height=2.2cm,left=2.2mm,right=2.2mm]
 {\bfseries\fontsize{9.5}{11}\selectfont Cutting Board}\\[1mm]
-{\color{teal}\bfseries\fontsize{6.5}{8}\selectfont INPUT}\ {\color{bodyText}\fontsize{7.5}{9}\selectfont Limit-switch presses}\\[0.6mm]
-{\color{rustText}\bfseries\fontsize{6.5}{8}\selectfont RESULT}\ {\color{bodyText}\fontsize{7.5}{9}\selectfont Raw $\to$ Chopped}
+{\color{teal}\bfseries\fontsize{6.5}{8}\selectfont INPUT}\ {\color{bodyText}\fontsize{7.5}{9.5}\selectfont Limit-switch presses}\\[0.6mm]
+{\color{rustText}\bfseries\fontsize{6.5}{8}\selectfont RESULT}\ {\color{bodyText}\fontsize{7.5}{9.5}\selectfont Raw $\to$ Chopped}
 \end{whitecard}
 \vspace{1.8mm}
-\begin{whitecard}
+\begin{whitecard}[height=2.2cm,left=2.2mm,right=2.2mm]
 {\bfseries\fontsize{9.5}{11}\selectfont Frying Pan}\\[1mm]
-{\color{teal}\bfseries\fontsize{6.5}{8}\selectfont INPUT}\ {\color{bodyText}\fontsize{7.5}{9}\selectfont Joystick: circle or zigzag}\\[0.6mm]
-{\color{rustText}\bfseries\fontsize{6.5}{8}\selectfont RESULT}\ {\color{bodyText}\fontsize{7.5}{9}\selectfont Raw $\to$ Cooked}
-\end{whitecard}
-\vspace{1.8mm}
-\begin{whitecard}
-{\bfseries\fontsize{9.5}{11}\selectfont Pot}\\[1mm]
-{\color{teal}\bfseries\fontsize{6.5}{8}\selectfont INPUT}\ {\color{bodyText}\fontsize{7.5}{9}\selectfont None --- timed by the server}\\[0.6mm]
-{\color{rustText}\bfseries\fontsize{6.5}{8}\selectfont RESULT}\ {\color{bodyText}\fontsize{7.5}{9}\selectfont Raw $\to$ Cooked $\to$ Burnt}
+{\color{teal}\bfseries\fontsize{6.5}{8}\selectfont INPUT}\ {\color{bodyText}\fontsize{7.5}{9.5}\selectfont Joystick: circle or zigzag}\\[0.6mm]
+{\color{rustText}\bfseries\fontsize{6.5}{8}\selectfont RESULT}\ {\color{bodyText}\fontsize{7.5}{9.5}\selectfont Raw $\to$ Cooked}
 \end{whitecard}
 \end{column}
-\begin{column}{0.5\textwidth}
-\begin{whitecard}
+\begin{column}{0.32\textwidth}
+\begin{whitecard}[height=2.2cm,left=2.2mm,right=2.2mm]
+{\bfseries\fontsize{9.5}{11}\selectfont Pot}\\[1mm]
+{\color{teal}\bfseries\fontsize{6.5}{8}\selectfont INPUT}\ {\color{bodyText}\fontsize{7.5}{9.5}\selectfont None --- server timed}\\[0.6mm]
+{\color{rustText}\bfseries\fontsize{6.5}{8}\selectfont RESULT}\ {\color{bodyText}\fontsize{7.5}{9.5}\selectfont Cooked $\to$ Burnt}
+\end{whitecard}
+\vspace{1.8mm}
+\begin{whitecard}[height=2.2cm,left=2.2mm,right=2.2mm]
 {\bfseries\fontsize{9.5}{11}\selectfont Sink} \hfill {\scriptsize\color{white}\colorbox{tealBright}{\strut NEW}}\\[1mm]
-{\color{teal}\bfseries\fontsize{6.5}{8}\selectfont INPUT}\ {\color{bodyText}\fontsize{7.5}{9}\selectfont Joystick scrubbed, any direction}\\[0.6mm]
-{\color{rustText}\bfseries\fontsize{6.5}{8}\selectfont RESULT}\ {\color{bodyText}\fontsize{7.5}{9}\selectfont Configurable wash step}
+{\color{teal}\bfseries\fontsize{6.5}{8}\selectfont INPUT}\ {\color{bodyText}\fontsize{7.5}{9.5}\selectfont Joystick, any direction}\\[0.6mm]
+{\color{rustText}\bfseries\fontsize{6.5}{8}\selectfont RESULT}\ {\color{bodyText}\fontsize{7.5}{9.5}\selectfont Configurable wash step}
 \end{whitecard}
-\vspace{1.8mm}
-\begin{whitecard}
+\end{column}
+\begin{column}{0.32\textwidth}
+\begin{whitecard}[height=2.2cm,left=2.2mm,right=2.2mm]
 {\bfseries\fontsize{9.5}{11}\selectfont Plate}\\[1mm]
-{\color{teal}\bfseries\fontsize{6.5}{8}\selectfont INPUT}\ {\color{bodyText}\fontsize{7.5}{9}\selectfont None --- the reader IS the plate}\\[0.6mm]
-{\color{rustText}\bfseries\fontsize{6.5}{8}\selectfont RESULT}\ {\color{bodyText}\fontsize{7.5}{9}\selectfont Collects whatever's placed on it}
+{\color{teal}\bfseries\fontsize{6.5}{8}\selectfont INPUT}\ {\color{bodyText}\fontsize{7.5}{9.5}\selectfont None, reader is the plate}\\[0.6mm]
+{\color{rustText}\bfseries\fontsize{6.5}{8}\selectfont RESULT}\ {\color{bodyText}\fontsize{7.5}{9.5}\selectfont Collects what's on it}
 \end{whitecard}
 \vspace{1.8mm}
-\begin{whitecard}
+\begin{whitecard}[height=2.2cm,left=2.2mm,right=2.2mm]
 {\bfseries\fontsize{9.5}{11}\selectfont Delivery}\\[1mm]
-{\color{teal}\bfseries\fontsize{6.5}{8}\selectfont INPUT}\ {\color{bodyText}\fontsize{7.5}{9}\selectfont Touch a plate's tag here}\\[0.6mm]
-{\color{rustText}\bfseries\fontsize{6.5}{8}\selectfont RESULT}\ {\color{bodyText}\fontsize{7.5}{9}\selectfont Matches an order, scores points}
+{\color{teal}\bfseries\fontsize{6.5}{8}\selectfont INPUT}\ {\color{bodyText}\fontsize{7.5}{9.5}\selectfont Touch a plate's tag here}\\[0.6mm]
+{\color{rustText}\bfseries\fontsize{6.5}{8}\selectfont RESULT}\ {\color{bodyText}\fontsize{7.5}{9.5}\selectfont Matches order, scores}
 \end{whitecard}
 \end{column}
 \end{columns}
@@ -553,32 +553,111 @@ Wiring, perfboard, case & \textasciitilde\$4 & 9 & Rough per-station estimate \\
 }
 
 % ============================================================
-% 11. SOFTWARE / PROTOCOL
+% 12. TESTED
 % ============================================================
 {
 \creamframe
 \begin{frame}[plain]
-\vspace{1mm}
+\vspace{5mm}
+\eyebrow{Tested In Real Life}{teal}\\[2mm]
+\slidetitle{Tested On Real Hardware}
+{\color{bodyText}\fontsize{10}{13}\selectfont
+Every station, the bridge, and a full round --- tested end to end on the real
+thing. All of it works.\par}
+\vspace{3mm}
+
+\begin{columns}[t,totalwidth=\linewidth]
+\begin{column}{0.32\textwidth}
+\begin{whitecard}[height=1.2cm,valign=center,top=1mm,bottom=1mm]
+{\color{tealBright}\bfseries\fontsize{10}{12}\selectfont $\checkmark$}\ {\bfseries\fontsize{9}{11}\selectfont Cutting Board}\\[0.5mm]
+{\color{mutedText}\fontsize{7.5}{9}\selectfont Limit switch}
+\end{whitecard}
+\end{column}
+\begin{column}{0.32\textwidth}
+\begin{whitecard}[height=1.2cm,valign=center,top=1mm,bottom=1mm]
+{\color{tealBright}\bfseries\fontsize{10}{12}\selectfont $\checkmark$}\ {\bfseries\fontsize{9}{11}\selectfont Frying Pan}\\[0.5mm]
+{\color{mutedText}\fontsize{7.5}{9}\selectfont Joystick}
+\end{whitecard}
+\end{column}
+\begin{column}{0.32\textwidth}
+\begin{whitecard}[height=1.2cm,valign=center,top=1mm,bottom=1mm]
+{\color{tealBright}\bfseries\fontsize{10}{12}\selectfont $\checkmark$}\ {\bfseries\fontsize{9}{11}\selectfont Pot}\\[0.5mm]
+{\color{mutedText}\fontsize{7.5}{9}\selectfont Server-timed}
+\end{whitecard}
+\end{column}
+\end{columns}
+\vspace{1.5mm}
+\begin{columns}[t,totalwidth=\linewidth]
+\begin{column}{0.32\textwidth}
+\begin{whitecard}[height=1.2cm,valign=center,top=1mm,bottom=1mm]
+{\color{tealBright}\bfseries\fontsize{10}{12}\selectfont $\checkmark$}\ {\bfseries\fontsize{9}{11}\selectfont Sink}\\[0.5mm]
+{\color{mutedText}\fontsize{7.5}{9}\selectfont Joystick}
+\end{whitecard}
+\end{column}
+\begin{column}{0.32\textwidth}
+\begin{whitecard}[height=1.2cm,valign=center,top=1mm,bottom=1mm]
+{\color{tealBright}\bfseries\fontsize{10}{12}\selectfont $\checkmark$}\ {\bfseries\fontsize{9}{11}\selectfont Plate}\\[0.5mm]
+{\color{mutedText}\fontsize{7.5}{9}\selectfont RFID tap}
+\end{whitecard}
+\end{column}
+\begin{column}{0.32\textwidth}
+\begin{whitecard}[height=1.2cm,valign=center,top=1mm,bottom=1mm]
+{\color{tealBright}\bfseries\fontsize{10}{12}\selectfont $\checkmark$}\ {\bfseries\fontsize{9}{11}\selectfont Delivery}\\[0.5mm]
+{\color{mutedText}\fontsize{7.5}{9}\selectfont RFID tap}
+\end{whitecard}
+\end{column}
+\end{columns}
+\vspace{1.5mm}
+\begin{columns}[t,totalwidth=\linewidth]
+\begin{column}{0.32\textwidth}
+\begin{whitecard}[height=1.2cm,valign=center,top=1mm,bottom=1mm]
+{\color{tealBright}\bfseries\fontsize{10}{12}\selectfont $\checkmark$}\ {\bfseries\fontsize{9}{11}\selectfont Bridge}\\[0.5mm]
+{\color{mutedText}\fontsize{7.5}{9}\selectfont ESP-NOW $\leftrightarrow$ USB}
+\end{whitecard}
+\end{column}
+\begin{column}{0.32\textwidth}
+\begin{whitecard}[height=1.2cm,valign=center,top=1mm,bottom=1mm]
+{\color{tealBright}\bfseries\fontsize{10}{12}\selectfont $\checkmark$}\ {\bfseries\fontsize{9}{11}\selectfont RFID readers}\\[0.5mm]
+{\color{mutedText}\fontsize{7.5}{9}\selectfont MFRC522, every station}
+\end{whitecard}
+\end{column}
+\begin{column}{0.32\textwidth}
+\begin{whitecard}[height=1.2cm,valign=center,top=1mm,bottom=1mm]
+{\color{tealBright}\bfseries\fontsize{10}{12}\selectfont $\checkmark$}\ {\bfseries\fontsize{9}{11}\selectfont Status LEDs}\\[0.5mm]
+{\color{mutedText}\fontsize{7.5}{9}\selectfont WS2812B strips}
+\end{whitecard}
+\end{column}
+\end{columns}
+\end{frame}
+}
+
+% ============================================================
+% 13. SOFTWARE / PROTOCOL
+% ============================================================
+{
+\creamframe
+\begin{frame}[plain]
+\vspace{5mm}
 \eyebrow{Software $\cdot$ Protocol}{teal}\\[1.5mm]
 \slidetitle{Talking Over ESP-NOW}
 
 \begin{columns}[t,totalwidth=\linewidth]
-\begin{column}{0.5\textwidth}
+\begin{column}{0.48\textwidth}
 \begin{whitecard}
 {\color{teal}\bfseries\fontsize{8}{10}\selectfont\MakeUppercase{Station $\to$ Bridge}}\\[1mm]
 {\color{darkText}\fontsize{8.5}{11}\selectfont
-\begin{itemize}
+\begin{itemize}\setlength{\itemsep}{0pt}\setlength{\topsep}{0pt}
 \item Hello, Heartbeat
 \item TagPlaced, TagRemoved
 \item TaskProgress, TaskDone
 \end{itemize}}
 \end{whitecard}
 \end{column}
-\begin{column}{0.5\textwidth}
+\begin{column}{0.48\textwidth}
 \begin{whitecard}
 {\color{rustText}\bfseries\fontsize{8}{10}\selectfont\MakeUppercase{Bridge $\to$ Station}}\\[1mm]
 {\color{darkText}\fontsize{8.5}{11}\selectfont
-\begin{itemize}
+\begin{itemize}\setlength{\itemsep}{0pt}\setlength{\topsep}{0pt}
 \item Welcome, Accept
 \item Reject
 \item SetDisplay
@@ -587,16 +666,14 @@ Wiring, perfboard, case & \textasciitilde\$4 & 9 & Rough per-station estimate \\
 \end{column}
 \end{columns}
 
-\vspace{3mm}
-\begin{center}
-\tikz\node[fill=bgDark, text=cream, rounded corners=4mm, inner sep=1.5mm, font=\bfseries\fontsize{7.5}{9}\selectfont]{5$\times$ retries};
-\hspace{2mm}
-\tikz\node[fill=bgDark, text=cream, rounded corners=4mm, inner sep=1.5mm, font=\bfseries\fontsize{7.5}{9}\selectfont]{200ms apart};
-\hspace{2mm}
+\vspace{2mm}
+\noindent\begin{minipage}{\linewidth}\RaggedRight
+\tikz[baseline=(n.base)]\node[fill=panel, text=cream, rounded corners=2mm, inner xsep=2.5mm, inner ysep=1.3mm, font=\bfseries\fontsize{7.5}{9}\selectfont](n){5$\times$ retries};\hspace{2mm}
+\tikz[baseline=(n.base)]\node[fill=panel, text=cream, rounded corners=2mm, inner xsep=2.5mm, inner ysep=1.3mm, font=\bfseries\fontsize{7.5}{9}\selectfont](n){200ms apart};\hspace{2mm}
 {\color{mutedText}\fontsize{8}{10}\selectfont Acked and de-duplicated by (MAC, sequence) --- a lost ack never runs a handler twice.}
-\end{center}
+\end{minipage}
 
-\vspace{2.5mm}
+\vspace{1.5mm}
 \begin{darkcard}
 {\color{tealBright}\ttfamily\fontsize{8}{10}\selectfont TX AABBCCDDEEFF 6 R 02}\\
 {\color{cream}\ttfamily\fontsize{8}{10}\selectfont RX AABBCCDDEEFF 2 04DEADBEEF000000000000}\\[1mm]
@@ -606,34 +683,34 @@ Wiring, perfboard, case & \textasciitilde\$4 & 9 & Rough per-station estimate \\
 }
 
 % ============================================================
-% 12. SOFTWARE / GAME SERVER
+% 14. SOFTWARE / GAME SERVER
 % ============================================================
 {
 \creamframe
 \begin{frame}[plain]
-\vspace{2mm}
+\vspace{5mm}
 \eyebrow{Software $\cdot$ Game Server}{teal}\\[1.5mm]
 \slidetitle{The Server Owns Every Bit Of State}
 
 \begin{columns}[t,totalwidth=\linewidth]
-\begin{column}{0.5\textwidth}
-\begin{whitecard}
+\begin{column}{0.48\textwidth}
+\begin{whitecard}[height=2.3cm]
 {\bfseries\fontsize{10}{12}\selectfont Pure Engine}\\[1mm]
 {\color{bodyText}\fontsize{8.5}{11}\selectfont A single class runs on events, a tick, and an injectable clock --- no serial or network inside, so tests drive it with fake time.}
 \end{whitecard}
-\vspace{2mm}
-\begin{whitecard}
+\vspace{1.8mm}
+\begin{whitecard}[height=2.3cm]
 {\bfseries\fontsize{10}{12}\selectfont Calibration Wizard}\\[1mm]
 {\color{bodyText}\fontsize{8.5}{11}\selectfont Touch any tag to the bridge to name it, touch it to every station, then touch each ingredient once. Saved to disk, reloadable.}
 \end{whitecard}
 \end{column}
-\begin{column}{0.5\textwidth}
-\begin{whitecard}
+\begin{column}{0.48\textwidth}
+\begin{whitecard}[height=2.3cm]
 {\bfseries\fontsize{10}{12}\selectfont One Behaviour Per Kind}\\[1mm]
 {\color{bodyText}\fontsize{8.5}{11}\selectfont A small class per station kind decides the rules; the numbers live in a level file, not in code.}
 \end{whitecard}
-\vspace{2mm}
-\begin{whitecard}
+\vspace{1.8mm}
+\begin{whitecard}[height=2.3cm]
 {\bfseries\fontsize{10}{12}\selectfont Live Web UI}\\[1mm]
 {\color{bodyText}\fontsize{8.5}{11}\selectfont Pushes the full game state over a websocket, ten times a second, to a plain-JavaScript scoreboard --- no build step.}
 \end{whitecard}
@@ -643,44 +720,42 @@ Wiring, perfboard, case & \textasciitilde\$4 & 9 & Rough per-station estimate \\
 }
 
 % ============================================================
-% 13. ENGINEERING RIGOR
+% 15. ENGINEERING RIGOR
 % ============================================================
 {
 \creamframe
 \begin{frame}[plain]
-\vspace{0.5mm}
-\eyebrow{Engineering Rigor}{teal}\\[0.8mm]
-\slidetitle{Built To Survive Contact With Real Hardware}
+\vspace{5mm}
+\eyebrow{Engineering Rigor}{teal}\\[1.5mm]
+\slidetitle{Built For Real Hardware}
 
-\begin{whitecard}[top=1mm,bottom=1mm]
+\begin{columns}[t,totalwidth=\linewidth]
+\begin{column}{0.6\textwidth}
+\begin{whitecard}[top=1.2mm,bottom=1.2mm]
 {\bfseries\fontsize{9}{11}\selectfont One Source Of Truth} --- {\color{bodyText}\fontsize{8}{10}\selectfont a test parses the C++ header and fails the build the moment Python's protocol drifts from the firmware.}
 \end{whitecard}
-\vspace{0.7mm}
-\begin{whitecard}[top=1mm,bottom=1mm]
+\vspace{1.2mm}
+\begin{whitecard}[top=1.2mm,bottom=1.2mm]
 {\bfseries\fontsize{9}{11}\selectfont Zero-Hardware Dev} --- {\color{bodyText}\fontsize{8}{10}\selectfont a simulated bridge speaks the real line protocol --- the whole game runs with zero boards plugged in.}
 \end{whitecard}
-\vspace{0.7mm}
-\begin{whitecard}[top=1mm,bottom=1mm]
+\vspace{1.2mm}
+\begin{whitecard}[top=1.2mm,bottom=1.2mm]
 {\bfseries\fontsize{9}{11}\selectfont Tested End To End} --- {\color{bodyText}\fontsize{8}{10}\selectfont Python tests plus native C++ unit tests for each station's pure logic --- no ESP32 required.}
 \end{whitecard}
-
-\vspace{2mm}
-\begin{columns}[t,totalwidth=\linewidth]
-\begin{column}{0.33\textwidth}
-\begin{darkcard}[top=1.2mm,bottom=1.2mm]
-\centering{\color{orange}\bfseries\fontsize{16}{18}\selectfont 102}\\[1.2mm]
+\end{column}
+\begin{column}{0.36\textwidth}
+\begin{darkcard}[height=1.55cm,valign=center]
+\centering{\color{orange}\bfseries\fontsize{16}{18}\selectfont 102}\\[1mm]
 {\color{creamMuted}\fontsize{7.5}{9}\selectfont Python tests, sub-second}
 \end{darkcard}
-\end{column}
-\begin{column}{0.33\textwidth}
-\begin{darkcard}[top=1.2mm,bottom=1.2mm]
-\centering{\color{tealBright}\bfseries\fontsize{16}{18}\selectfont 21}\\[1.2mm]
-{\color{creamMuted}\fontsize{7.5}{9}\selectfont native C++ tests, three firmware projects}
+\vspace{1.2mm}
+\begin{darkcard}[height=1.55cm,valign=center]
+\centering{\color{tealBright}\bfseries\fontsize{16}{18}\selectfont 21}\\[1mm]
+{\color{creamMuted}\fontsize{7.5}{9}\selectfont native C++ tests, 3 firmware projects}
 \end{darkcard}
-\end{column}
-\begin{column}{0.33\textwidth}
-\begin{darkcard}[top=1.2mm,bottom=1.2mm]
-\centering{\color{orange}\bfseries\fontsize{16}{18}\selectfont 0}\\[1.2mm]
+\vspace{1.2mm}
+\begin{darkcard}[height=1.55cm,valign=center]
+\centering{\color{orange}\bfseries\fontsize{16}{18}\selectfont 0}\\[1mm]
 {\color{creamMuted}\fontsize{7.5}{9}\selectfont boards needed to run any of them}
 \end{darkcard}
 \end{column}
@@ -689,102 +764,52 @@ Wiring, perfboard, case & \textasciitilde\$4 & 9 & Rough per-station estimate \\
 }
 
 % ============================================================
-% 14. WHAT'S NEXT
+% 16. WHAT'S NEXT
 % ============================================================
 {
 \creamframe
 \begin{frame}[plain]
-\vspace{2mm}
+\vspace{5mm}
 \eyebrow{What's Next}{teal}\\[1.5mm]
 \slidetitle{What's Cooking Next}
 
-\renewcommand{\arraystretch}{1.5}
+\renewcommand{\arraystretch}{2.1}
 {\fontsize{9.5}{12}\selectfont
-\begin{tabular}{@{}p{0.09\linewidth}p{0.86\linewidth}@{}}
+\begin{tabular}{@{}m{0.07\linewidth}m{0.9\linewidth}@{}}
 {\color{orange}\bfseries\fontsize{12}{14}\selectfont 01} &
-\textbf{Tune on real hardware} --- RC522 removal timing, joystick dead zone, cook times \\ \hline
+\textbf{More levels} --- new kitchens, bigger orders, and tougher recipes, so teams have to coordinate harder each round \\ \hline
 {\color{orange}\bfseries\fontsize{12}{14}\selectfont 02} &
-\textbf{Give the sink a real recipe} --- it's wired end to end, but no ingredient uses it yet \\ \hline
+\textbf{Better physical stations} --- 3D-printed housings for the cutting board, pan, pot, and sink instead of loose breadboards, still on a budget \\ \hline
 {\color{orange}\bfseries\fontsize{12}{14}\selectfont 03} &
-\textbf{Show plate contents on their LEDs} --- one more display mode, mirrored on both sides \\ \hline
+\textbf{More station types} --- give the sink a real recipe, add new appliances, and show plate contents on their LEDs \\ \hline
 {\color{orange}\bfseries\fontsize{12}{14}\selectfont 04} &
-\textbf{Read more than one tag at once} --- several foods on a single plate, via RC522 anticollision \\ \hline
-{\color{orange}\bfseries\fontsize{12}{14}\selectfont 05} &
-\textbf{Watch bridge health} --- catch a hung-but-connected bridge, not just a disconnected one \\
+\textbf{Bigger teams} --- more players, more stations, and a full table-sized kitchen for team events \\
 \end{tabular}
 }
 \end{frame}
 }
 
 % ============================================================
-% 15. THE TEAM
-% ============================================================
-{
-\creamframe
-\begin{frame}[plain]
-\vspace{2mm}
-\eyebrow{Credits}{teal}\\[2mm]
-\slidetitle{The Team}
-
-\begin{columns}[t,totalwidth=\linewidth]
-\begin{column}{0.25\textwidth}
-\centering
-\avatarplaceholder[1.6cm]{PHOTO}\\[2mm]
-{\bfseries\fontsize{9.5}{11}\selectfont [Name]}\\
-{\color{mutedText}\fontsize{7.5}{9}\selectfont Firmware \& Stations}
-\end{column}
-\begin{column}{0.25\textwidth}
-\centering
-\avatarplaceholder[1.6cm]{PHOTO}\\[2mm]
-{\bfseries\fontsize{9.5}{11}\selectfont [Name]}\\
-{\color{mutedText}\fontsize{7.5}{9}\selectfont Game Server \& Protocol}
-\end{column}
-\begin{column}{0.25\textwidth}
-\centering
-\avatarplaceholder[1.6cm]{PHOTO}\\[2mm]
-{\bfseries\fontsize{9.5}{11}\selectfont [Name]}\\
-{\color{mutedText}\fontsize{7.5}{9}\selectfont Hardware \& Wiring}
-\end{column}
-\begin{column}{0.25\textwidth}
-\centering
-\avatarplaceholder[1.6cm]{PHOTO}\\[2mm]
-{\bfseries\fontsize{9.5}{11}\selectfont [Name]}\\
-{\color{mutedText}\fontsize{7.5}{9}\selectfont UI \& Product}
-\end{column}
-\end{columns}
-
-\vspace{8mm}
-\begin{center}
-{\color{mutedText}\itshape\fontsize{9}{12}\selectfont [Add names, roles, and GitHub / contact links before presenting.]}
-\end{center}
-\end{frame}
-}
-
-% ============================================================
-% 16. CLOSING
+% 17. CLOSING
 % ============================================================
 {
 \darkframe
 \begin{frame}[plain]
+\vspace*{6mm}
 \begin{tikzpicture}[remember picture, overlay]
-  \clip (current page.south west) rectangle ($(current page.north east)+(-\videostripw-\videostripgap,0)$);
-  \fill[tealBright, opacity=0.14] ([xshift=-1.2cm,yshift=-1.4cm]current page.north east) circle (2.4cm);
+    \fill[tealBright, opacity=0.14] ([xshift=-1.2cm,yshift=-1.4cm]current page.north east) circle (2.4cm);
   \fill[orange, opacity=0.12] ([xshift=-3.2cm,yshift=1.4cm]current page.south east) circle (1.7cm);
 \end{tikzpicture}
-\vspace{10mm}
-\eyebrow{Thank You}{orange}\\[5mm]
-{\color{cream}\fontsize{34}{38}\selectfont\bfseries Come Break It.}\\[5mm]
-\begin{minipage}{0.82\linewidth}
+\eyebrow{Thank You}{orange}\\[9mm]
+{\color{cream}\fontsize{34}{38}\selectfont\bfseries Come Break It.}\\[7mm]
+\begin{minipage}{0.72\linewidth}
 {\color{creamMuted}\fontsize{12}{17}\selectfont
 Jam the joystick, yank a tag mid-chop, unplug the bridge mid-round --- the
 server is built to shrug it off and pick up right where you left it.\par}
 \end{minipage}
 \vfill
-\begin{flushleft}
-{\color{creamMuted}\ttfamily\footnotesize undercooked-irl}
-\end{flushleft}
-\vspace{-8mm}
-\hfill{\color{creamMuted}\footnotesize [Names / contact]}
+{\color{cream}\bfseries\fontsize{11}{13}\selectfont Team 2b2y}\hfill
+{\color{creamMuted}\fontsize{11}{13}\selectfont SASE Hack 2026}
 \end{frame}
 }
 
